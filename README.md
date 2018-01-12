@@ -1,4 +1,4 @@
-# ToySMT - simple SMT solver under ~1500 SLOC of pure C.
+# MK85 - toy-level, simple SMT solver under ~1500 SLOC of pure C.
 
 It's very early sneak preview.
 It supports only bools and bitvecs. No integers, let alone reals and arrays and tuples and whatever.
@@ -24,14 +24,11 @@ First, you can check your .smt files using other SMT solver (I used z3, Boolecto
 
 ## Name
 
-ToySMT is not to be confused with this project: https://github.com/msakai/toysolver
-Perhaps, I should find another name...
-
-Any suggestions?
+It was previously named "ToySMT", but then I got to know about existence of another project called "toysmt":
+https://github.com/msakai/toysolver
 
 Since other SMT-solvers use cryptic acronyms as names, and since the name of Z3 has probably been taken from Z3 computer,
-I'm considering name "RK86" ( after Soviet DIY home computer [Radio-86RK](https://en.wikipedia.org/wiki/Radio-86RK) )
-and "MK85" ( after Soviet programmable calculator [Elektronika MK-85](http://www.leningrad.su/museum/show_calc.php?n=224) ).
+I choose a "MK85" name ( after Soviet programmable calculator [Elektronika MK-85](http://www.leningrad.su/museum/show_calc.php?n=224) ).
 
 ## History
 
@@ -42,7 +39,7 @@ Many SAT Python-based examples has been published in my blog: https://yurichev.c
 And at some point I realised I can do simple SMT-solver, I need only to add parser and keep tabs on variables.
 This is what I did.
 
-Hence, in order to fully understand ToySMT, you can first try to understand my SAT Python-based examples.
+Hence, in order to fully understand MK85, you can first try to understand my SAT Python-based examples.
 
 ## Extreme simplicity
 
