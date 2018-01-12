@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 
-#include "ToySMT.h"
+#include "MK85.h"
 #include "utils.h"
 
 #define VAR_ALWAYS_FALSE 1

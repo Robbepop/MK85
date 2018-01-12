@@ -1,11 +1,11 @@
 COPT=-Wall -g -c -O3
 #COPT=-Wall -g -pg -c
 
-all: ToySMT
+all: MK85
 
-ToySMT: lex.yy.o y.tab.o ToySMT.o utils.o
-	#gcc ToySMT.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -lgc -g -pg -o ToySMT
-	gcc ToySMT.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -lgc -g -o ToySMT
+MK85: lex.yy.o y.tab.o MK85.o utils.o
+	#gcc MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -lgc -g -pg -o MK85
+	gcc MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -lgc -g -o MK85
 
 utils.o: utils.c utils.h
 	gcc $(COPT) utils.c
@@ -23,8 +23,8 @@ y.tab.h: smt2.y
 y.tab.o: y.tab.c y.tab.h
 	gcc $(COPT) -DYYDEBUG=1 y.tab.c
 
-ToySMT.o: ToySMT.c
-	gcc $(COPT) ToySMT.c
+MK85.o: MK85.c
+	gcc $(COPT) MK85.c
 
 clean:
 	rm *.o
