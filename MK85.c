@@ -289,14 +289,19 @@ void dump_all_variables(bool dump_internal)
 		if (v->type==TY_BOOL)
 		{
 			assert (v->val<=1);
-			printf ("\t(define-fun %s () Bool %s)\n", v->id, false_true_s[v->val]);
+			if (dump_internal==false)
+				printf ("\t(define-fun %s () Bool %s)\n", v->id, false_true_s[v->val]);
+			else
+				printf ("\t(define-fun %s () Bool %s) ; var_no=%d\n", v->id, false_true_s[v->val], v->var_no);
 		}
 		else if (v->type==TY_BITVEC)
 		{
-  			printf ("\t(define-fun %s () (_ BitVec %d) (_ bv%u %d)) ; 0x%x\n",
-				v->id, v->width, v->val, v->width, v->val);
-  			//printf ("\t(define-fun %s () (_ BitVec %d) (_ bv%u %d)) ; 0x%x var_no=%d\n",
-			//	v->id, v->width, v->val, v->width, v->val, v->var_no);
+			if (dump_internal==false)
+  				printf ("\t(define-fun %s () (_ BitVec %d) (_ bv%u %d)) ; 0x%x\n",
+					v->id, v->width, v->val, v->width, v->val);
+			else
+  				printf ("\t(define-fun %s () (_ BitVec %d) (_ bv%u %d)) ; 0x%x var_no=%d\n",
+					v->id, v->width, v->val, v->width, v->val, v->var_no);
 		}
 		else
 		{
@@ -454,15 +459,31 @@ void add_clause4(int v1, int v2, int v3, int v4)
 	add_clause ("%d %d %d %d", v1, v2, v3, v4);
 };
 
-void add_comment(const char* s)
+int current_indent=0;
+
+void add_comment(const char* fmt, ...)
 {
-	//printf ("%s() %s\n", __FUNCTION__, s);
+	va_list va;
 
-	size_t len=strlen(s)+3;
-	char *tmp=xmalloc(len);
-	snprintf (tmp, len, "c %s", s);
+	va_start (va, fmt);
+	size_t buflen=vsnprintf (NULL, 0, fmt, va)+2+1;
+	va_end(va);
 
-	add_line(tmp);
+	char* buf=xmalloc(buflen+2+current_indent);
+	buf[0]='c';
+	buf[1]=' ';
+
+	// add indentation:
+	for (int i=0; i<current_indent; i++)
+		buf[2+i]=' ';
+
+	va_start (va, fmt);
+	int written=vsnprintf (buf+2+current_indent, buflen, fmt, va);
+	va_end(va);
+
+	assert (written<buflen);
+
+	add_line(buf);
 };
 
 struct variable* generate_const(uint32_t val, int width)
@@ -498,7 +519,7 @@ struct variable* generate_NOT(struct variable* v)
 		die ("Error: sort mismatch: 'not' takes bool expression, which is not in %s\n", v->id);
 
 	struct variable* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_NOT");
+	add_comment ("generate_NOT id=%s var=%d, out id=%s out var=%d", v->id, v->var_no, rt->id, rt->var_no);
 	add_Tseitin_NOT (rt->var_no, v->var_no);
 	return rt;
 };
@@ -792,7 +813,8 @@ struct variable* generate_XOR(struct variable* v1, struct variable* v2)
 	assert(v1->type==TY_BOOL);
 	assert(v2->type==TY_BOOL);
 	struct variable* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_XOR");
+	add_comment ("generate_XOR id1=%s id2=%s var1=%d var2=%d out id=%s out var=%d",
+		v1->id, v2->id, v1->var_no, v2->var_no, rt->id, rt->var_no);
 	add_Tseitin_XOR (v1->var_no, v2->var_no, rt->var_no);
 	return rt;
 };
@@ -857,8 +879,10 @@ struct variable* generate_EQ(struct variable* v1, struct variable* v2)
 			printf ("v2=%s type=%d width=%d\n", v2->id, v2->type, v2->width);
 			die("");
 		};
-		add_comment ("generate_EQ");
+		add_comment ("generate_EQ id1=%s, id2=%s, var1=%d, var2=%d", v1->id, v2->id, v1->var_no, v2->var_no);
+		//current_indent++;
 		struct variable *v=generate_NOT(generate_XOR(v1, v2));
+		//current_indent--;
 		//printf ("%s() returns %s (Bool)\n", __FUNCTION__, v->id);
 		return v;
 	}
@@ -895,7 +919,8 @@ void add_Tseitin_AND(int a, int b, int out)
 struct variable* generate_AND(struct variable* v1, struct variable* v2)
 {
 	struct variable* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_AND");
+	add_comment ("generate_AND id1=%s id2=%s var1=%d var2=%d out id=%s out var=%d", 
+		v1->id, v2->id, v1->var_no, v2->var_no, rt->id, rt->var_no);
 	add_Tseitin_AND(v1->var_no, v2->var_no, rt->var_no);
 	return rt;
 };
@@ -1014,7 +1039,8 @@ struct variable* generate_BVMUL(struct variable* X, struct variable* Y)
 struct variable* generate_OR(struct variable* v1, struct variable* v2)
 {
 	struct variable* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_OR");
+	add_comment ("generate_OR id1=%s id2=%s var1=%d var2=%d out id=%s out var=%d",
+		v1->id, v2->id, v1->var_no, v2->var_no, rt->id, rt->var_no);
 	add_clause3 (v1->var_no, v2->var_no, -rt->var_no);
 	add_clause2 (-v1->var_no, rt->var_no);
 	add_clause2 (-v2->var_no, rt->var_no);
@@ -1143,7 +1169,7 @@ void create_assert (struct expr* e)
 	printf ("\n");
 */
 	struct variable* v=generate(e);
-	add_comment ("create_assert()");
+	add_comment ("create_assert() id=%s var=%d", v->id, v->var_no);
 	add_clause1 (v->var_no); // v must be True
 };
 
