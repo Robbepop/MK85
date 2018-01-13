@@ -415,11 +415,17 @@ void add_line(char *s)
 void add_clause(const char* fmt, ...)
 {
 	va_list va;
-	va_start (va, fmt);
 
+	va_start (va, fmt);
 	size_t buflen=vsnprintf (NULL, 0, fmt, va)+2+1;
+	va_end(va);
+
 	char* buf=xmalloc(buflen);
+
+	va_start (va, fmt);
 	int written=vsnprintf (buf, buflen, fmt, va);
+	va_end(va);
+
 	assert (written<buflen);
 	strcpy (buf+strlen(buf), " 0");
 
