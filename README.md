@@ -2,6 +2,7 @@
 
 It's very early sneak preview.
 It supports only bools and bitvecs. No integers, let alone reals and arrays and tuples and whatnot.
+Its complexity is comparable to simple LISP interpreter.
 
 However, it can serve as education tool (hopefully).
 

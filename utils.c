@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 // Boehm garbage collector:
-#include <gc.h>
+//#include <gc.h>
 
 void die(const char* fmt, ...)
 {
