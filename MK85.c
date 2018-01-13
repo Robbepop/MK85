@@ -10,9 +10,6 @@
 #include "MK85.h"
 #include "utils.h"
 
-#define VAR_ALWAYS_FALSE 1
-#define VAR_ALWAYS_TRUE 2
-
 struct variable* var_always_false=NULL;
 struct variable* var_always_true=NULL;
 
@@ -257,8 +254,7 @@ void print_expr(struct expr* e)
 	assert (0);
 };
 
-// 3 instead of 1, becasue two variables (false/true) are allocated at start
-int next_var_no=3;
+int next_var_no=1;
 
 struct variable
 {
@@ -642,7 +638,7 @@ struct variable* generate_BVSUB(struct variable* v1, struct variable* v2)
 	struct variable* rt=create_internal_variable("SUB_result", TY_BITVEC, v1->width);
 	add_comment ("generate_BVSUB");
 
-	int borrow=VAR_ALWAYS_FALSE;
+	int borrow=var_always_false->var_no;
 
 	// the first full-subtractor could be half-subtractor, but we make things simple here
 	for (int i=0; i<v1->width; i++)
@@ -666,7 +662,7 @@ struct variable* generate_BVSUB_borrow(struct variable* v1, struct variable* v2)
 	struct variable* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
 	add_comment ("generate_BVSUB_borrow");
 
-	int borrow=VAR_ALWAYS_FALSE;
+	int borrow=var_always_false->var_no;
 	struct variable* borrow_out=NULL; // make compiler happy
 
 	// the first full-subtractor could be half-subtractor, but we make things simple here
@@ -971,7 +967,7 @@ struct variable* generate_zero_extend(struct variable *in, int zeroes_to_add)
 void add_Tseitin_always_false(int v, int width)
 {
 	for (int i=0; i<width; i++)
-		add_Tseitin_EQ(v+i, VAR_ALWAYS_FALSE);
+		add_Tseitin_EQ(v+i, var_always_false->var_no);
 };
 
 // cnt is not a SMT variable!
@@ -1193,9 +1189,6 @@ void fill_variables_from_SAT_solver_response(int *array)
 		// works for both bools and bitvecs. set bit.
 		int v=array[i];
 
-		// fixed to false/true, absent in our tables:
-		if (abs(v)==1 || abs(v)==2)
-			continue;
 		if (v<0)
 		{
 			sv=find_variable_by_no(-v);
@@ -1299,10 +1292,6 @@ void get_all_models(bool dump_variables)
 
 void init()
 {
-	// TODO get rid of:
-	add_clause1(-VAR_ALWAYS_FALSE);
-	add_clause1(VAR_ALWAYS_TRUE);
-
 	var_always_false=create_variable("always_false", TY_BOOL, 1, true);
 	add_clause1(-var_always_false->var_no);
 	var_always_true=create_variable("always_true", TY_BOOL, 1, true);
