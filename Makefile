@@ -17,7 +17,7 @@ lex.yy.c: smt2.l y.tab.h
 lex.yy.o: lex.yy.c
 	gcc $(COPT) -DYYDEBUG=1 lex.yy.c
 
-y.tab.h: smt2.y
+y.tab.h y.tab.c: smt2.y
 	bison -y -d -t smt2.y
 
 y.tab.o: y.tab.c y.tab.h
