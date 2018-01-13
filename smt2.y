@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "ToySMT.h"
+#include "MK85.h"
 #include "utils.h"
 
 int yylex(void);
