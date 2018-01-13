@@ -1,0 +1,9 @@
+sat
+(model
+	(define-fun fg () Bool false)
+	(define-fun fi () Bool true)
+	(define-fun tg () Bool true)
+	(define-fun ti () Bool false)
+	(define-fun eg () Bool true)
+	(define-fun ei () Bool false)
+)

@@ -42,3 +42,7 @@ fi
 ./MK85 tests/modinv.smt > tmp && diff tmp tests/modinv.correct
 ./MK85 tests/bvneg_count_fixpoints.smt > tmp && diff tmp tests/bvneg_count_fixpoints.correct
 
+./MK85 examples/mc.smt > tmp && diff tmp examples/mc.correct
+./MK85 examples/fred.smt > tmp && diff tmp examples/fred.correct
+
+
