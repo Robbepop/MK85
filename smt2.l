@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ToySMT.h"
+#include "MK85.h"
 // die():
 #include "utils.h"
 
