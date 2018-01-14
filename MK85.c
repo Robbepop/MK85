@@ -28,6 +28,8 @@ void add_Tseitin_AND(int a, int b, int out);
 void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
+char* op_name(enum OP op);
+struct variable* generate_BVADD(struct variable* v1, struct variable* v2);
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
@@ -81,9 +83,6 @@ struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, 
 
 // from smt2.y:
 int yylineno;
-
-// fwd decl;
-char* op_name(enum OP op);
 
 struct expr* create_vararg_expr(enum OP t, struct expr* args)
 {
@@ -542,9 +541,6 @@ struct variable* generate_BVNOT(struct variable* v)
 	return rt;
 };
 
-// fwd decl:
-struct variable* generate_BVADD(struct variable* v1, struct variable* v2);
-
 struct variable* generate_BVNEG(struct variable* v)
 {
 	if (v->type!=TY_BITVEC)
@@ -556,6 +552,7 @@ struct variable* generate_BVNEG(struct variable* v)
 
 void add_Tseitin_XOR(int v1, int v2, int v3)
 {
+	add_comment ("%s %d=%d^%d", __FUNCTION__, v3, v1, v2);
 	add_clause3 (-v1, -v2, -v3);
 	add_clause3 (v1, v2, -v3);
 	add_clause3 (v1, -v2, v3);
@@ -564,18 +561,15 @@ void add_Tseitin_XOR(int v1, int v2, int v3)
 
 void add_Tseitin_OR2(int v1, int v2, int var_out)
 {
-	add_comment (__FUNCTION__);
+	add_comment ("%s %d=%d|%d", __FUNCTION__, var_out, v1, v2);
 	add_clause("%d %d -%d", v1, v2, var_out);
 	add_clause2(-v1, var_out);
 	add_clause2(-v2, var_out);
 };
 
-// fwd decl:
-void add_Tseitin_AND(int a, int b, int out);
-
 void add_FA(int a, int b, int cin, int s, int cout)
 {
-	add_comment("add_FA");
+	add_comment("%s inputs=%d, %d, cin=%d, s=%d, cout=%d", __FUNCTION__, a, b, cin, s, cout);
 #if 0
 	// full-adder, as found by Mathematica using truth table:
         add_clause4(-a, -b, -cin, s);
@@ -616,7 +610,7 @@ void generate_adder(struct variable* a, struct variable* b, struct variable *car
 	assert(carry_in->type==TY_BOOL);
 
 	*sum=create_internal_variable("adder_sum", TY_BITVEC, a->width);
-	add_comment (__FUNCTION__);
+	add_comment ("%s", __FUNCTION__);
 
 	int carry=carry_in->var_no;
 
@@ -920,6 +914,7 @@ struct variable* generate_NEQ(struct variable* v1, struct variable* v2)
 
 void add_Tseitin_AND(int a, int b, int out)
 {
+	add_comment ("%s %d=%d&%d", __FUNCTION__, out, a, b);
 	add_clause3 (-a, -b, out);
 	add_clause2 (a, -out);
 	add_clause2 (b, -out);
@@ -1306,6 +1301,7 @@ void get_all_models(bool dump_variables)
 		// add negated solution:
 		negate_all_elements_in_int_array(solution);
 		char* str=list_of_ints_to_str(solution);
+		add_comment("negated solution");
 		add_clause(str);
 	};
 	printf ("Model count: %d\n", total);
@@ -1314,7 +1310,9 @@ void get_all_models(bool dump_variables)
 void init()
 {
 	var_always_false=create_variable("always_false", TY_BOOL, 1, true);
+	add_comment ("always false");
 	add_clause1(-var_always_false->var_no);
+	add_comment ("always true");
 	var_always_true=create_variable("always_true", TY_BOOL, 1, true);
 	add_clause1(var_always_true->var_no);
 };
