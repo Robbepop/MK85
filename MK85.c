@@ -855,7 +855,7 @@ struct variable* generate_BVXOR(struct variable* v1, struct variable* v2)
 // return=var OR var+1 OR ... OR var+width-1
 void add_Tseitin_OR_list(int var, int width, int var_out)
 {
-	add_comment ("%s(var=%d, width=%d, var_out=%d)\n", __FUNCTION__, var, width, var_out);
+	add_comment ("%s(var=%d, width=%d, var_out=%d)", __FUNCTION__, var, width, var_out);
 	char* tmp=create_string_of_numbers_in_range(var, width);
 	add_clause("%s -%d", tmp, var_out);
 	for (int i=0; i<width; i++)
@@ -865,7 +865,7 @@ void add_Tseitin_OR_list(int var, int width, int var_out)
 struct variable* generate_OR_list(int var, int width)
 {
 	struct variable* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("%s(var=%d, width=%d) var out=%d\n", __FUNCTION__, var, width, rt->var_no);
+	add_comment ("%s(var=%d, width=%d) var out=%d", __FUNCTION__, var, width, rt->var_no);
 	add_Tseitin_OR_list(var, width, rt->var_no);
 	return rt;
 };
