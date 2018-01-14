@@ -12,7 +12,12 @@
 			((_ zero_extend 16) a) 
 			((_ zero_extend 16) b)
 		)
-		((_ zero_extend 16) #x1234)))
+		((_ zero_extend 16) #xa25f)))
+
+; 0xc5*0xd3 = 0xa25f
+
+; there are two ways to factor 0xa25f, to make it works each time unchanged, make the first result less than the second:
+(assert (bvult a b))
 
 (check-sat)
 (get-model)

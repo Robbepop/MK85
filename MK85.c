@@ -17,6 +17,16 @@ struct variable* var_always_true=NULL;
 bool dump_internal_variables;
 
 // fwd decl:
+struct variable* generate_EQ(struct variable* v1, struct variable* v2);
+struct variable* generate_ITE(struct variable* sel, struct variable* t, struct variable* f);
+struct variable* generate_OR(struct variable* v1, struct variable* v2);
+struct variable* generate_extract(struct variable *v, unsigned begin, unsigned width);
+struct variable* generate_shift_left(struct variable* X, unsigned int cnt);
+struct variable* generate_shift_right(struct variable* X, unsigned int cnt);
+struct variable* generate_zero_extend(struct variable *in, int zeroes_to_add);
+void add_Tseitin_AND(int a, int b, int out);
+void add_Tseitin_EQ(int v1, int v2);
+void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
@@ -552,11 +562,22 @@ void add_Tseitin_XOR(int v1, int v2, int v3)
 	add_clause3 (-v1, v2, v3);
 };
 
-// TODO use Tseitin + gates?
-// full-adder, as found by Mathematica using truth table:
+void add_Tseitin_OR2(int v1, int v2, int var_out)
+{
+	add_comment (__FUNCTION__);
+	add_clause("%d %d -%d", v1, v2, var_out);
+	add_clause2(-v1, var_out);
+	add_clause2(-v2, var_out);
+};
+
+// fwd decl:
+void add_Tseitin_AND(int a, int b, int out);
+
 void add_FA(int a, int b, int cin, int s, int cout)
 {
 	add_comment("add_FA");
+#if 0
+	// full-adder, as found by Mathematica using truth table:
         add_clause4(-a, -b, -cin, s);
         add_clause3(-a, -b, cout);
         add_clause3(-a, -cin, cout);
@@ -571,6 +592,18 @@ void add_FA(int a, int b, int cin, int s, int cout)
         add_clause3(b, -cout, -s);
         add_clause3(-cin, cout, s);
         add_clause3(cin, -cout, -s);
+#endif
+	// allocate 3 "joint" variables:
+	int XOR1_out=next_var_no++;
+	int AND1_out=next_var_no++;
+	int AND2_out=next_var_no++;
+	// add gates and connect them.
+	// order doesn't matter, BTW:
+	add_Tseitin_XOR(a, b, XOR1_out);
+	add_Tseitin_XOR(XOR1_out, cin, s);
+	add_Tseitin_AND(XOR1_out, cin, AND1_out);
+	add_Tseitin_AND(a, b, AND2_out);
+	add_Tseitin_OR2(AND1_out, AND2_out, cout);
 };
 
 void generate_adder(struct variable* a, struct variable* b, struct variable *carry_in, // inputs
@@ -677,10 +710,6 @@ struct variable* generate_BVSUB_borrow(struct variable* v1, struct variable* v2)
 	return borrow_out;
 };
 
-// fwd decl:
-struct variable* generate_EQ(struct variable* v1, struct variable* v2);
-struct variable* generate_OR(struct variable* v1, struct variable* v2);
-
 struct variable* generate_BVULT(struct variable* v1, struct variable* v2)
 {
 	assert(v1->type==TY_BITVEC);
@@ -721,9 +750,6 @@ struct variable* generate_BVUGE(struct variable* v1, struct variable* v2)
 	return generate_OR(generate_BVUGT(v1, v2), generate_EQ(v1, v2));
 };
 
-// fwd decl:
-struct variable* generate_ITE(struct variable* sel, struct variable* t, struct variable* f);
-
 // it's like SUBGE in ARM CPU in ARM mode
 // rationale: used in divisor!
 void generate_BVSUBGE(struct variable* enable, struct variable* v1, struct variable* v2,
@@ -739,10 +765,6 @@ void generate_BVSUBGE(struct variable* enable, struct variable* v1, struct varia
 	*output=generate_ITE(enable, generate_ITE(*cond, diff, v1), v1);
 };
 
-// fwd decl:
-void add_Tseitin_OR_list(int var, int width, int var_out);
-struct variable* generate_zero_extend(struct variable *in, int zeroes_to_add);
-
 void add_Tseitin_BV_is_zero (int var_no, int width, int var_no_out)
 {
 	// all bits in BV are zero?
@@ -752,12 +774,6 @@ void add_Tseitin_BV_is_zero (int var_no, int width, int var_no_out)
 	add_Tseitin_OR_list(var_no, width, tmp->var_no);
 	add_Tseitin_NOT(tmp->var_no, var_no_out);
 };
-
-// fwd decl
-void add_Tseitin_EQ(int v1, int v2);
-struct variable* generate_shift_left(struct variable* X, unsigned int cnt);
-struct variable* generate_extract(struct variable *v, unsigned begin, unsigned width);
-struct variable* generate_shift_right(struct variable* X, unsigned int cnt);
 
 void generate_divisor (struct variable* divident, struct variable* divisor, struct variable** q, struct variable** r)
 {
@@ -814,9 +830,6 @@ struct variable* generate_XOR(struct variable* v1, struct variable* v2)
 	add_Tseitin_XOR (v1->var_no, v2->var_no, rt->var_no);
 	return rt;
 };
-
-// fwd decl:
-void add_Tseitin_AND(int a, int b, int out);
 
 struct variable* generate_BVAND(struct variable* v1, struct variable* v2)
 {
@@ -1029,6 +1042,10 @@ struct variable* generate_BVMUL(struct variable* X, struct variable* Y)
 	for (int i=1; i<w; i++)
 		product=generate_BVADD(product, partial_products2[i]);
 
+	// fix high part at 0? not yet.
+	//for (int i=w; i<w*2; i++)
+	//	add_Tseitin_EQ(product->var_no+i, var_always_false->var_no);	
+
 	return generate_extract(product, 0, w);
 };
 
@@ -1189,16 +1206,20 @@ void fill_variables_from_SAT_solver_response(int *array)
 		// works for both bools and bitvecs. set bit.
 		int v=array[i];
 
+		// if variable not found in our records, it was allocated somewhere in *Tseitin* functions,
+		// and doesn't needs to be taken into account
 		if (v<0)
 		{
 			sv=find_variable_by_no(-v);
-			assert(sv);
+			if (sv==NULL)
+				continue;
 			clear_bit(&sv->val, (-v) - sv->var_no);
 		}
 		else
 		{
 			sv=find_variable_by_no(v);
-			assert(sv);
+			if (sv==NULL)
+				continue;
 			set_bit(&sv->val, v - sv->var_no);
 		}
 	}
