@@ -495,7 +495,7 @@ struct variable* generate_const(uint32_t val, int width)
 {
 	//printf ("%s(%d, %d)\n", __FUNCTION__, val, width);
 	struct variable* rt=create_internal_variable("internal", TY_BITVEC, width);
-	add_comment("generate_const()");
+	add_comment("generate_const(val=%d, width=%d). var_no=[%d..%d]", val, width, rt->var_no, rt->var_no+width-1);
 	for (int i=0; i<width; i++)
 	{
 		if ((val>>i)&1)
@@ -843,7 +843,9 @@ struct variable* generate_BVXOR(struct variable* v1, struct variable* v2)
 	assert(v2->type==TY_BITVEC);
 	assert(v1->width==v2->width);
 	struct variable* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
-	add_comment ("generate_BVXOR");
+	add_comment ("generate_BVXOR v1=[%d...%d] v2=[%d...%d]",
+		v1->var_no, v1->var_no+v1->width-1,
+		v2->var_no, v2->var_no+v2->width-1);
 	for (int i=0; i<v1->width; i++)
 		add_Tseitin_XOR (v1->var_no+i, v2->var_no+i, rt->var_no+i);
 	return rt;
@@ -853,8 +855,7 @@ struct variable* generate_BVXOR(struct variable* v1, struct variable* v2)
 // return=var OR var+1 OR ... OR var+width-1
 void add_Tseitin_OR_list(int var, int width, int var_out)
 {
-	//printf ("%s(%d, %d)\n", __FUNCTION__, var, width);
-	add_comment (__FUNCTION__);
+	add_comment ("%s(var=%d, width=%d, var_out=%d)\n", __FUNCTION__, var, width, var_out);
 	char* tmp=create_string_of_numbers_in_range(var, width);
 	add_clause("%s -%d", tmp, var_out);
 	for (int i=0; i<width; i++)
@@ -863,9 +864,8 @@ void add_Tseitin_OR_list(int var, int width, int var_out)
 
 struct variable* generate_OR_list(int var, int width)
 {
-	//printf ("%s(%d, %d)\n", __FUNCTION__, var, width);
 	struct variable* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment (__FUNCTION__);
+	add_comment ("%s(var=%d, width=%d) var out=%d\n", __FUNCTION__, var, width, rt->var_no);
 	add_Tseitin_OR_list(var, width, rt->var_no);
 	return rt;
 };
@@ -899,7 +899,9 @@ struct variable* generate_EQ(struct variable* v1, struct variable* v2)
 			printf ("v1=%s, v2=%s\n", v1->id, v2->id);
 			exit(0);
 		};
-		add_comment ("generate_EQ for two bitvectors");
+		add_comment ("generate_EQ for two bitvectors, v1=[%d...%d], v2=[%d...%d]", 
+			v1->var_no, v1->var_no+v1->width-1,
+			v2->var_no, v2->var_no+v2->width-1);
 		struct variable* t=generate_BVXOR(v1,v2);
 		struct variable* v=generate_NOT(generate_OR_list(t->var_no, t->width));
 		//printf ("%s() returns %s (bitvec %d)\n", __FUNCTION__, v->id, v->width);
