@@ -90,7 +90,7 @@ Glueling all this together:
 	};
 
 Now the puzzle.
-a>>b must be equal to 0x12345678, while several bits in "a" must be reset, like a&0xf1110100.
+a>>b must be equal to 0x12345678, while several bits in "a" must be reset, like (a&0xf1110100)==0.
 Find a, b:
 
 	(declare-fun a () (_ BitVec 32))
