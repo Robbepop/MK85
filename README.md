@@ -23,6 +23,10 @@ Anything else can fail.
 Also, error reporting is somewhat user-unfriendly.
 First, you can check your .smt files using other SMT solver (I used z3, Boolector, STP, Yices, CVC4).
 
+## Thanks
+
+[Armin Biere](http://fmv.jku.at/biere/) patiently helped with my endless boring-to-death questions.
+
 ## Name
 
 It was previously named "ToySMT", but then I got to know about existence of another project called [toysmt](https://github.com/msakai/toysolver).
