@@ -789,6 +789,8 @@ void generate_divisor (struct variable* divident, struct variable* divisor, stru
 		struct variable* cond;
 		generate_BVSUBGE(enable, divident, generate_extract(wide2, 0, w), &divident, &cond);
 		add_Tseitin_EQ(cond->var_no, (*q)->var_no+w-1-i);
+		if (i+1==w)
+			break;
 		wide2=generate_shift_right(wide2, 1);
 	};
 	*r=divident;
@@ -974,10 +976,10 @@ struct variable* generate_zero_extend(struct variable *in, int zeroes_to_add)
 	return rt;
 };
 
-void add_Tseitin_always_false(int v, int width)
+void fix_BV_to_zero (int v, int width)
 {
 	for (int i=0; i<width; i++)
-		add_Tseitin_EQ(v+i, var_always_false->var_no);
+		add_clause1(-(v+i));
 };
 
 // cnt is not a SMT variable!
@@ -987,7 +989,8 @@ struct variable* generate_shift_left(struct variable* X, unsigned int cnt)
 
 	struct variable* rt=create_internal_variable("shifted_left", TY_BITVEC, w);
 
-	add_Tseitin_always_false(rt->var_no, cnt);
+	fix_BV_to_zero(rt->var_no, cnt);
+
 	add_Tseitin_EQ_bitvecs(w-cnt, rt->var_no+cnt, X->var_no);
 
 	return rt;
@@ -1000,7 +1003,8 @@ struct variable* generate_shift_right(struct variable* X, unsigned int cnt)
 
 	struct variable* rt=create_internal_variable("shifted_right", TY_BITVEC, w);
 
-	add_Tseitin_always_false(rt->var_no+w-1-cnt, cnt);
+	fix_BV_to_zero(rt->var_no+w-cnt, cnt);
+
 	add_Tseitin_EQ_bitvecs(w-cnt, rt->var_no, X->var_no+cnt);
 	return rt;
 };
