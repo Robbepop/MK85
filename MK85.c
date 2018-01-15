@@ -572,6 +572,7 @@ void add_FA(int a, int b, int cin, int s, int cout)
 	add_comment("%s inputs=%d, %d, cin=%d, s=%d, cout=%d", __FUNCTION__, a, b, cin, s, cout);
 #if 0
 	// full-adder, as found by Mathematica using truth table:
+	// TODO which is faster?
         add_clause4(-a, -b, -cin, s);
         add_clause3(-a, -b, cout);
         add_clause3(-a, -cin, cout);
@@ -657,50 +658,54 @@ void add_FS(int x, int y, int bin, int d, int bout)
 	add_clause3(bout, -d, -y);
 };
 
+void generate_subtractor(struct variable* v1, struct variable* v2, 
+	struct variable** rt, struct variable** borrow_out)
+{
+	assert(v1->type==TY_BITVEC);
+	assert(v2->type==TY_BITVEC);
+	assert(v1->width==v2->width);
+
+	*rt=create_internal_variable("SUB_result", TY_BITVEC, v1->width);
+
+	add_comment (__FUNCTION__);
+
+	int borrow=var_always_false->var_no;
+
+	// the first full-subtractor could be half-subtractor, but we make things simple here
+	for (int i=0; i<v1->width; i++)
+	{
+		*borrow_out=create_internal_variable("internal", TY_BOOL, 1);
+		add_FS(v1->var_no+i, v2->var_no+i, borrow, (*rt)->var_no+i, (*borrow_out)->var_no);
+		// newly created borrow_out is a borrow_in for the next full-subtractor:
+		borrow=(*borrow_out)->var_no;
+	};
+};
+
 struct variable* generate_BVSUB(struct variable* v1, struct variable* v2)
 {
 	assert(v1->type==TY_BITVEC);
 	assert(v2->type==TY_BITVEC);
 	assert(v1->width==v2->width);
-	struct variable* rt=create_internal_variable("SUB_result", TY_BITVEC, v1->width);
-	add_comment ("generate_BVSUB");
 
-	int borrow=var_always_false->var_no;
+	struct variable* rt=NULL;
+	struct variable* borrow_out=NULL;
 
-	// the first full-subtractor could be half-subtractor, but we make things simple here
-	for (int i=0; i<v1->width; i++)
-	{
-		struct variable* borrow_out=create_internal_variable("internal", TY_BOOL, 1);
-		add_FS(v1->var_no+i, v2->var_no+i, borrow, rt->var_no+i, borrow_out->var_no);
-		// newly created borrow_out is a borrow_in for the next full-subtractor:
-		borrow=borrow_out->var_no;
-	};
+	generate_subtractor(v1, v2, &rt, &borrow_out);
 
 	return rt;
 };
 
-// only borrow-out is returned!
-// TODO join two functions into one?!
 struct variable* generate_BVSUB_borrow(struct variable* v1, struct variable* v2)
 {
 	assert(v1->type==TY_BITVEC);
 	assert(v2->type==TY_BITVEC);
 	assert(v1->width==v2->width);
-	struct variable* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
-	add_comment ("generate_BVSUB_borrow");
 
-	int borrow=var_always_false->var_no;
-	struct variable* borrow_out=NULL; // make compiler happy
+	struct variable* rt=NULL;
+	struct variable* borrow_out=NULL;
 
-	// the first full-subtractor could be half-subtractor, but we make things simple here
-	for (int i=0; i<v1->width; i++)
-	{
-		borrow_out=create_internal_variable("internal", TY_BOOL, 1);
-		add_FS(v1->var_no+i, v2->var_no+i, borrow, rt->var_no+i, borrow_out->var_no);
-		// newly created borrow_out is a borrow_in for the next full-subtractor:
-		borrow=borrow_out->var_no;
-	};
-	//printf ("%s() returns %s\n", __FUNCTION__, borrow_out->id);
+	generate_subtractor(v1, v2, &rt, &borrow_out);
+
 	return borrow_out;
 };
 
