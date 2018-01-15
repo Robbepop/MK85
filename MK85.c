@@ -30,6 +30,7 @@ void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
 char* op_name(enum OP op);
 struct variable* generate_BVADD(struct variable* v1, struct variable* v2);
+void add_Tseitin_EQ(int v1, int v2);
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
@@ -614,15 +615,20 @@ void generate_adder(struct variable* a, struct variable* b, struct variable *car
 	add_comment ("%s", __FUNCTION__);
 
 	int carry=carry_in->var_no;
+	int carry_out_tmp=0; // make compiler happy
 
 	// the first full-adder could be half-adder, but we make things simple here
 	for (int i=0; i<a->width; i++)
 	{
-		*carry_out=create_internal_variable("adder_carry", TY_BOOL, 1);
-		add_FA(a->var_no+i, b->var_no+i, carry, (*sum)->var_no+i, (*carry_out)->var_no);
+		//*carry_out=create_internal_variable("adder_carry", TY_BOOL, 1);
+		carry_out_tmp=next_var_no++;
+		add_FA(a->var_no+i, b->var_no+i, carry, (*sum)->var_no+i, carry_out_tmp);
 		// newly created carry_out is a carry_in for the next full-adder:
-		carry=(*carry_out)->var_no;
+		carry=carry_out_tmp;
 	};
+
+	*carry_out=create_internal_variable("adder_carry", TY_BOOL, 1);
+	add_Tseitin_EQ(carry_out_tmp, (*carry_out)->var_no);
 };
 
 struct variable* generate_BVADD(struct variable* v1, struct variable* v2)
