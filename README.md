@@ -41,6 +41,17 @@ This is what I did.
 
 Hence, in order to fully understand MK85, you can first try to understand my SAT Python-based examples.
 
+## Internals
+
+There are two main structures.
+
+"struct expr" used during parsing.
+
+"struct SMT_var" is a "high level" structure reflecting each SMT variable, which can be bool or bitvector.
+The structure has linked "SAT_var", which is number of variable on SAT level + width.
+For boolean, only one SAT variable is used.
+For bitvector of width w, SMT variable occupies [SAT_var, SAT_var+w-1] SAT variables.
+
 ## Extreme simplicity
 
 It has no optimizations at all.
