@@ -52,6 +52,8 @@ void yyerror(char *);
 "zero_extend"	{ return T_ZERO_EXTEND; }
 "extract"	{ return T_EXTRACT; }
 "ite"		{ return T_ITE; }
+"bvshl"		{ return T_BVSHL; }
+"bvlshr"	{ return T_BVLSHR; }
 "bvshl1"	{ return T_BVSHL1; }
 "bvshr1"	{ return T_BVSHR1; }
 "bvsubge"	{ return T_BVSUBGE; }

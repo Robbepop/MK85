@@ -45,4 +45,7 @@ fi
 ./MK85 examples/mc.smt > tmp && diff tmp examples/mc.correct
 ./MK85 examples/fred.smt > tmp && diff tmp examples/fred.correct
 
+./MK85 tests/bvshl2_test.smt > tmp && diff tmp tests/bvshl2_test.correct
+./MK85 tests/bvlshr2_test.smt > tmp && diff tmp tests/bvlshr2_test.correct
+
 

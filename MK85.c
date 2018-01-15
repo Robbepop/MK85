@@ -31,6 +31,7 @@ void print_expr(struct expr* e);
 char* op_name(enum OP op);
 struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2);
 void add_Tseitin_EQ(int v1, int v2);
+void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width);
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
@@ -202,6 +203,8 @@ char* op_name(enum OP op)
 		case OP_BVULE:	return "bvule";
 		case OP_BVUGT:	return "bvugt";
 		case OP_BVULT:	return "bvult";
+		case OP_BVSHL:	return "bvshl";
+		case OP_BVLSHR:	return "bvlshr";
 		case OP_ITE:	return "ite";
 		default:
 			assert(0);
@@ -989,7 +992,7 @@ struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add)
 	return rt;
 };
 
-// cnt is not a SMT variable!
+// "cnt" is not a SMT variable!
 struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt)
 {
 	int w=X->width;
@@ -1014,6 +1017,60 @@ struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt)
 
 	add_Tseitin_EQ_bitvecs(w-cnt, rt->SAT_var, X->SAT_var+cnt);
 	return rt;
+};
+
+// direction=false for shift left
+// direction=true for shift right
+
+// for 8-bit left shifter, this is:
+// X=ITE(cnt&1, X<<1, X)
+// X=ITE((cnt>>1)&1, X<<2, X)
+// X=ITE((cnt>>2)&1, X<<4, X)
+// i.e., if the bit is set in cnt, shift X by that ammount of bits, or do nothing otherwise
+
+struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction)
+{
+	int w=X->width;
+
+	struct SMT_var* in=X;
+	struct SMT_var* out;
+	struct SMT_var* tmp;
+
+	// bit vector must have width=2^x, i.e., 8, 16, 32, 64, etc
+	assert (popcount64c (w)==1);
+
+	int bits_in_selector=mylog2(w);
+
+	for (int i=0; i<bits_in_selector; i++)
+	{
+		if (direction==false)
+			tmp=generate_shift_left(in, 1<<i);
+		else
+			tmp=generate_shift_right(in, 1<<i);
+
+		out=create_internal_variable("tmp", TY_BITVEC, w);
+
+		add_Tseitin_ITE_BV (cnt->SAT_var+i, tmp->SAT_var, in->SAT_var, out->SAT_var, w);
+
+		in=out;
+	};
+
+	// if any bit is set in high part of "cnt" variable, result is 0
+	// i.e., if a 8-bit bitvector is shifted by cnt>8, give a zero
+	struct SMT_var *disable_shifter=create_internal_variable("...", TY_BOOL, 1);
+	add_Tseitin_OR_list(cnt->SAT_var+bits_in_selector, w-bits_in_selector, disable_shifter->SAT_var);
+
+	return generate_ITE(disable_shifter, generate_const(0, w), in);
+};
+
+struct SMT_var* generate_BVSHL (struct SMT_var* X, struct SMT_var* cnt)
+{
+	return generate_shifter (X, cnt, false);
+};
+
+struct SMT_var* generate_BVLSHR (struct SMT_var* X, struct SMT_var* cnt)
+{
+	return generate_shifter (X, cnt, true);
 };
 
 struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width)
@@ -1080,6 +1137,12 @@ void add_Tseitin_ITE (int s, int t, int f, int x)
 	add_clause3(s, f, -x);
 };
 
+void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width)
+{
+	for (int i=0; i<width; i++)
+		add_Tseitin_ITE(s, t+i, f+i, x+i);
+};
+
 struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f)
 {
 	assert (sel->type==TY_BOOL);
@@ -1089,8 +1152,10 @@ struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, t->width);
 
-	for (int i=0; i<t->width; i++)
-		add_Tseitin_ITE(sel->SAT_var, t->SAT_var+i, f->SAT_var+i, rt->SAT_var+i);
+	add_Tseitin_ITE_BV (sel->SAT_var, t->SAT_var, f->SAT_var, rt->SAT_var, t->width);
+
+	//for (int i=0; i<t->width; i++)
+	//	add_Tseitin_ITE(sel->SAT_var, t->SAT_var+i, f->SAT_var+i, rt->SAT_var+i);
 	return rt;
 }
 
@@ -1167,6 +1232,8 @@ struct SMT_var* generate(struct expr* e)
 						};
 			case OP_BVUDIV:		return generate_BVUDIV (v1, v2);
 			case OP_BVUREM:		return generate_BVUREM (v1, v2);
+			case OP_BVSHL:		return generate_BVSHL (generate (e->op1), generate (e->op2));
+			case OP_BVLSHR:		return generate_BVLSHR (generate (e->op1), generate (e->op2));
 			default:		assert(0);
 		}
 	};

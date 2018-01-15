@@ -9,6 +9,8 @@
 enum OP
 {
 	OP_NOT,
+	OP_BVSHL,
+	OP_BVLSHR,
 	OP_BVSHL1,
 	OP_BVSHR1,
 	OP_EQ,

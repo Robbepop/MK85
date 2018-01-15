@@ -14,3 +14,6 @@ void clear_bit(uint32_t *v, int bit);
 void negate_all_elements_in_int_array(int *a);
 size_t count_ints_in_array(int *a);
 char *list_of_ints_to_str(int *a);
+uint32_t mylog2(const uint32_t x);
+int popcount64c(uint64_t x);
+
