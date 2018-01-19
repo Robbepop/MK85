@@ -334,17 +334,35 @@ struct SMT_var* find_variable(char *id)
 	return NULL;
 };
 
+struct SMT_var* find_variable_by_no_last_ptr=NULL;
+
 struct SMT_var* find_variable_by_no(int no)
 {
 	if (vars==NULL)
 		return NULL;
-		
-	for (struct SMT_var* v=vars; v; v=v->next)
+
+	struct SMT_var* v;
+
+	if (find_variable_by_no_last_ptr==NULL)
+		v=vars;
+	else
 	{
+		v=find_variable_by_no_last_ptr;
+		// need reset?
+		if (no < v->SAT_var)
+			v=vars;
+	};
+		
+	for (; v; v=v->next)
+	{
+		find_variable_by_no_last_ptr=v;
 		if (v->SAT_var == no)
 			return v;
 		if (no >= v->SAT_var && no < v->SAT_var+v->width)
 			return v;
+		// we've reached too far?
+		if (no < v->SAT_var)
+			return NULL;
 	};
 	return NULL;
 };
@@ -1028,7 +1046,7 @@ struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt)
 // X=ITE((cnt>>2)&1, X<<4, X)
 // i.e., if the bit is set in cnt, shift X by that ammount of bits, or do nothing otherwise
 
-struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction)
+struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, bool direction)
 {
 	int w=X->width;
 
@@ -1063,6 +1081,33 @@ struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool d
 	return generate_ITE(disable_shifter, generate_const(0, w), in);
 };
 
+struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction)
+{
+	int w=X->width;
+
+	// FIXME: better func name:
+	if (popcount64c (w)!=1)
+	{
+		// X is not in 2^n form, so extend it
+		// RATIONALE: input must be in $2^n$ form, so the shift count will be $n$
+		//printf ("%s() width=%d\n", __FUNCTION__, w);
+		int new_w=1<<(mylog2(w)+1);
+		//printf ("%s() extending it to width=%d\n", __FUNCTION__, new_w);
+		X=generate_zero_extend(X, new_w-w);
+		cnt=generate_zero_extend(cnt, new_w-w);
+	}
+
+	struct SMT_var* rt=generate_shifter_real(X, cnt, direction);
+
+	if (popcount64c (w)!=1)
+	{
+		// X is not in 2^n form
+		rt=generate_extract (rt, 0, w);
+	};
+
+	return rt;
+};
+
 struct SMT_var* generate_BVSHL (struct SMT_var* X, struct SMT_var* cnt)
 {
 	return generate_shifter (X, cnt, false);
@@ -1076,6 +1121,7 @@ struct SMT_var* generate_BVLSHR (struct SMT_var* X, struct SMT_var* cnt)
 struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width)
 {
 	struct SMT_var* rt=create_internal_variable("extracted", TY_BITVEC, width);
+	// FIXME: use _BV function
 	for (int i=0; i<width; i++)
 		add_Tseitin_EQ(rt->SAT_var+i, v->SAT_var+begin+i);
 
@@ -1274,6 +1320,8 @@ void write_CNF(char *fname)
 	fclose (f);
 };
 
+/*
+TODO: drop this:
 void fill_variables_from_SAT_solver_response(int *array)
 {
 	for (int i=0; array[i]; i++)
@@ -1299,6 +1347,28 @@ void fill_variables_from_SAT_solver_response(int *array)
 			set_bit(&sv->val, v - sv->SAT_var);
 		}
 	}
+};
+*/
+
+uint32_t SAT_solution_to_value(int* a, int w)
+{
+	int rt=0;
+	for (int i=0; i<w; i++)
+		if (a[i]>0)
+			rt|=1<<i;
+	return rt;
+};
+
+void fill_variables_from_SAT_solver_response(int *array)
+{
+	for (struct SMT_var* v=vars; v; v=v->next)
+	{
+		// do not set internal variables, for faster results:
+		if (v->internal)
+			continue;
+
+		v->val=SAT_solution_to_value(&array[v->SAT_var-1], v->width);
+	};
 };
 
 int* solution;

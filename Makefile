@@ -4,8 +4,7 @@ COPT=-Wall -g -c -O3
 all: MK85
 
 MK85: lex.yy.o y.tab.o MK85.o utils.o
-	#gcc MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -lgc -g -pg -o MK85
-	#gcc MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -lgc -g -o MK85
+	#gcc MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
 	gcc MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -o MK85
 
 utils.o: utils.c utils.h

@@ -31,7 +31,7 @@ First, you can check your .smt files using other SMT solver (I used z3, Boolecto
 
 It was previously named "ToySMT", but then I got to know about existence of another project called [toysmt](https://github.com/msakai/toysolver).
 
-Since other SMT-solvers use cryptic acronyms as names, and since the name of Z3 has probably been taken from Z3 computer,
+Since other SMT-solvers use cryptic acronyms as names, and since the name of Z3 has probably been taken from [Z3 computer](https://en.wikipedia.org/wiki/Z3_%28computer%29),
 I choose a "MK85" name (after Soviet programmable calculator [Elektronika MK-85](http://www.leningrad.su/museum/show_calc.php?n=224)).
 
 ## History

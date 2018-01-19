@@ -47,5 +47,6 @@ fi
 
 ./MK85 tests/bvshl2_test.smt > tmp && diff tmp tests/bvshl2_test.correct
 ./MK85 tests/bvlshr2_test.smt > tmp && diff tmp tests/bvlshr2_test.correct
+./MK85 tests/bvlshr_10.smt > tmp && diff tmp tests/bvlshr_10.correct
 
 
