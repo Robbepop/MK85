@@ -34,7 +34,7 @@ void xfree (void* p)
 
 char* xstrdup(const char *s)
 {
-	char* rt=xmalloc(strlen(s)+1);
+	char* rt=(char*)xmalloc(strlen(s)+1);
 	strcpy (rt, s);
 	return rt;
 };
@@ -45,7 +45,7 @@ char* xstrdup(const char *s)
 // allocates space for array
 int* list_of_numbers_to_array (char *s, size_t array_size, size_t *parsed)
 {
-	int *rt=xmalloc(array_size*sizeof(int));
+	int *rt=(int*)xmalloc(array_size*sizeof(int));
 	assert(rt);
 	int i=0;
 	char *t=strtok(s, " \r\n");
@@ -63,7 +63,7 @@ int* list_of_numbers_to_array (char *s, size_t array_size, size_t *parsed)
 char* create_string_of_numbers_in_range(int begin, size_t size)
 {
 	size_t buflen=size*10;
-	char* buf=xmalloc(buflen);
+	char* buf=(char*)xmalloc(buflen);
 	buf[0]=0;
 	for (int i=0; i<size; i++)
 	{
@@ -101,7 +101,7 @@ size_t count_ints_in_array(int *a)
 
 char *list_of_ints_to_str(int *a)
 {
-	char* rt=malloc(count_ints_in_array(a)*10);
+	char* rt=(char*)malloc(count_ints_in_array(a)*10);
 	rt[0]=0;
 	char tmp[32];
 	for (int i=0; a[i]; i++)

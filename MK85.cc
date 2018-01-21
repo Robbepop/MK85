@@ -1,14 +1,13 @@
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
 
-#include "MK85.h"
-#include "utils.h"
+#include "MK85.hh"
+#include "utils.hh"
 
 struct SMT_var* var_always_false=NULL;
 struct SMT_var* var_always_true=NULL;
@@ -28,14 +27,14 @@ void add_Tseitin_AND(int a, int b, int out);
 void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
-char* op_name(enum OP op);
+const char* op_name(enum OP op);
 struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2);
 void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width);
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
-	struct expr* rt=xmalloc(sizeof(struct expr));
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
 	rt->type=EXPR_UNARY;
 	rt->op=t;
@@ -54,7 +53,7 @@ struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2)
 	print_expr(op2);
 	printf ("\n");
 */
-	struct expr* rt=xmalloc(sizeof(struct expr));
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
 	rt->type=EXPR_BINARY;
 	rt->op=t;
@@ -74,7 +73,7 @@ struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, 
 	print_expr(op2);
 	printf ("\n");
 */
-	struct expr* rt=xmalloc(sizeof(struct expr));
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->type=EXPR_TERNARY;
 	rt->op=t;
 	rt->op1=op1;
@@ -84,7 +83,7 @@ struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, 
 };
 
 // from smt2.y:
-int yylineno;
+extern int yylineno;
 
 struct expr* create_vararg_expr(enum OP t, struct expr* args)
 {
@@ -150,7 +149,7 @@ struct expr* create_distinct_expr(struct expr* args)
 struct expr* create_const_expr(uint32_t c, int w)
 {
 	//printf ("%s(%d, %d)\n", __FUNCTION__, c, w);
-	struct expr* rt=xmalloc(sizeof(struct expr));
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->type=EXPR_CONST;
 	rt->const_val=c;
 	rt->const_width=w;
@@ -159,7 +158,7 @@ struct expr* create_const_expr(uint32_t c, int w)
 
 struct expr* create_zero_extend_expr(int bits, struct expr* e)
 {
-	struct expr* rt=xmalloc(sizeof(struct expr));
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->type=EXPR_ZERO_EXTEND;
 	rt->const_val=bits;
 	rt->op1=e;
@@ -174,7 +173,7 @@ struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e)
 
 	unsigned w=end-start+1;
 
-	struct expr* rt=xmalloc(sizeof(struct expr));
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->type=EXPR_EXTRACT;
 	rt->const_val=start;
 	rt->const_width=w;
@@ -182,7 +181,7 @@ struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e)
 	return rt;
 };
 
-char* op_name(enum OP op)
+const char* op_name(enum OP op)
 {
 	switch (op)
 	{
@@ -283,7 +282,7 @@ struct SMT_var
 
 struct SMT_var* vars=NULL;
 
-char* false_true_s[2]={"false", "true"};
+const char* false_true_s[2]={"false", "true"};
 
 void dump_all_variables(bool dump_internal)
 {
@@ -380,12 +379,12 @@ struct SMT_var* create_variable(char *name, int type, int width, int internal)
 	struct SMT_var* v;
 	if (vars==NULL)
 	{
-		v=vars=xmalloc(sizeof(struct SMT_var));
+		v=vars=(struct SMT_var*)xmalloc(sizeof(struct SMT_var));
 	}
 	else
 	{
 		for (v=vars; v->next; v=v->next);
-		v->next=xmalloc(sizeof(struct SMT_var));
+		v->next=(struct SMT_var*)xmalloc(sizeof(struct SMT_var));
 		v=v->next;
 	};
 	v->type=type;
@@ -433,10 +432,10 @@ struct clause *last_clause=NULL;
 void add_line(char *s)
 {
 	if (clauses==NULL)
-		last_clause=clauses=xmalloc(sizeof(struct clause));
+		last_clause=clauses=(struct clause*)xmalloc(sizeof(struct clause));
 	else
 	{
-		struct clause *cl=xmalloc(sizeof(struct clause));
+		struct clause *cl=(struct clause*)xmalloc(sizeof(struct clause));
 		last_clause->next=cl;
 		last_clause=cl;
 	};
@@ -452,7 +451,7 @@ void add_clause(const char* fmt, ...)
 	size_t buflen=vsnprintf (NULL, 0, fmt, va)+2+1;
 	va_end(va);
 
-	char* buf=xmalloc(buflen);
+	char* buf=(char*)xmalloc(buflen);
 
 	va_start (va, fmt);
 	int written=vsnprintf (buf, buflen, fmt, va);
@@ -496,7 +495,7 @@ void add_comment(const char* fmt, ...)
 	size_t buflen=vsnprintf (NULL, 0, fmt, va)+2+1;
 	va_end(va);
 
-	char* buf=xmalloc(buflen+2+current_indent);
+	char* buf=(char*)xmalloc(buflen+2+current_indent);
 	buf[0]='c';
 	buf[1]=' ';
 
@@ -1385,7 +1384,7 @@ bool run_SAT_solver_and_get_solution()
 	// parse SAT response:
 
 	size_t buflen=SAT_next_var_no*10;
-	char *buf=xmalloc(buflen);
+	char *buf=(char*)xmalloc(buflen);
 	assert(buf);
 
 	FILE* f=fopen ("result.txt", "rt");

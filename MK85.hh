@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
 
 #define TY_BOOL 0
 #define TY_BITVEC 1
@@ -88,5 +87,5 @@ void get_model();
 void get_all_models(bool dump_variables);
 
 // global switches
-bool dump_internal_variables;
+extern bool dump_internal_variables;
 

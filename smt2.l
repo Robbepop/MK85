@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "MK85.h"
+#include "MK85.hh"
 // die():
-#include "utils.h"
+#include "utils.hh"
 
 void yyerror(char *);
 %}
