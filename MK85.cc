@@ -1309,15 +1309,15 @@ void write_CNF(const char *fname)
 		fprintf (f, "p wcnf %d %d %d\n", SAT_next_var_no-1, clauses_t, hard_clause_weight);
 	else
 		fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
-	for (auto c=clauses.begin(); c!=clauses.end(); c++)
+	for (auto c : clauses)
 	{
-		int type=c->first;
+		int type=c.first;
 		if (type==0 && maxsat)
-			fprintf (f, "%d %s\n", hard_clause_weight, c->second.c_str());
+			fprintf (f, "%d %s\n", hard_clause_weight, c.second.c_str());
 		else
 		{
 			// comments and soft clauses:
-			fprintf (f, "%s\n", c->second.c_str());
+			fprintf (f, "%s\n", c.second.c_str());
 		};
 	};
 	fclose (f);
