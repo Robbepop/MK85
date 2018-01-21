@@ -323,7 +323,7 @@ void dump_all_variables(bool dump_internal)
 
 };
 
-struct SMT_var* find_variable(char *id)
+struct SMT_var* find_variable(const char *id)
 {
 	if (vars==NULL)
 		return NULL;
@@ -336,40 +336,7 @@ struct SMT_var* find_variable(char *id)
 	return NULL;
 };
 
-struct SMT_var* find_variable_by_no_last_ptr=NULL;
-
-struct SMT_var* find_variable_by_no(int no)
-{
-	if (vars==NULL)
-		return NULL;
-
-	struct SMT_var* v;
-
-	if (find_variable_by_no_last_ptr==NULL)
-		v=vars;
-	else
-	{
-		v=find_variable_by_no_last_ptr;
-		// need reset?
-		if (no < v->SAT_var)
-			v=vars;
-	};
-		
-	for (; v; v=v->next)
-	{
-		find_variable_by_no_last_ptr=v;
-		if (v->SAT_var == no)
-			return v;
-		if (no >= v->SAT_var && no < v->SAT_var+v->width)
-			return v;
-		// we've reached too far?
-		if (no < v->SAT_var)
-			return NULL;
-	};
-	return NULL;
-};
-
-struct SMT_var* create_variable(char *name, int type, int width, int internal)
+struct SMT_var* create_variable(const char *name, int type, int width, int internal)
 {
 	if (type==TY_BOOL)
 		assert(width==1);
@@ -413,7 +380,7 @@ struct SMT_var* create_variable(char *name, int type, int width, int internal)
 
 int next_internal_var=1;
 
-struct SMT_var* create_internal_variable(char* prefix, int type, int width)
+struct SMT_var* create_internal_variable(const char* prefix, int type, int width)
 {
 	char tmp[128];
 	snprintf (tmp, sizeof(tmp), "%s!%d", prefix, next_internal_var);
@@ -1294,7 +1261,7 @@ void create_assert (struct expr* e)
 
 bool sat=false;
 
-void write_CNF(char *fname)
+void write_CNF(const char *fname)
 {
 	FILE* f=fopen (fname, "wt");
 	assert (f!=NULL);
@@ -1303,36 +1270,6 @@ void write_CNF(char *fname)
 		fprintf (f, "%s\n", c->c_str());
 	fclose (f);
 };
-
-/*
-TODO: drop this:
-void fill_variables_from_SAT_solver_response(int *array)
-{
-	for (int i=0; array[i]; i++)
-	{
-		struct SMT_var* sv;
-		// works for both bools and bitvecs. set bit.
-		int v=array[i];
-
-		// if variable not found in our records, it was allocated somewhere in *Tseitin* functions,
-		// and doesn't needs to be taken into account
-		if (v<0)
-		{
-			sv=find_variable_by_no(-v);
-			if (sv==NULL)
-				continue;
-			clear_bit(&sv->val, (-v) - sv->SAT_var);
-		}
-		else
-		{
-			sv=find_variable_by_no(v);
-			if (sv==NULL)
-				continue;
-			set_bit(&sv->val, v - sv->SAT_var);
-		}
-	}
-};
-*/
 
 uint32_t SAT_solution_to_value(int* a, int w)
 {

@@ -79,7 +79,7 @@ struct expr* create_zero_extend_expr(int bits, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
 struct expr* create_ITE(struct expr* sel, struct expr* t, struct expr* f);
 
-struct SMT_var* create_variable(char *name, int type, int width, int internal);
+struct SMT_var* create_variable(const char *name, int type, int width, int internal);
 void init();
 void create_assert (struct expr* e);
 void check_sat();
