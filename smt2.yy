@@ -21,6 +21,7 @@ void yyerror(const char *);
 
 %token T_L_PAREN T_R_PAREN T_UNDERSCORE T_DOT
 %token T_SET_LOGIC T_SET_INFO T_DECLARE_FUN T_ASSERT T_CHECK_SAT T_GET_MODEL T_QF_BV T_BVNOT T_BVNEG T_GET_ALL_MODELS
+%token T_MAXIMIZE T_MINIMIZE
 %token T_COUNT_MODELS
 %token T_SMT_LIB_VERSION
 %token T_NUMBER T_ID T_TEXT T_CONST T_BV_DEC_CONST
@@ -60,6 +61,14 @@ commandline: T_L_PAREN T_SET_LOGIC T_QF_BV T_R_PAREN
         | T_L_PAREN T_ASSERT expr T_R_PAREN
 	{
 		create_assert($3);
+	}
+        | T_L_PAREN T_MINIMIZE expr T_R_PAREN
+	{
+		create_min_max($3, false);
+	}
+        | T_L_PAREN T_MAXIMIZE expr T_R_PAREN
+	{
+		create_min_max($3, true);
 	}
         | T_L_PAREN T_CHECK_SAT T_R_PAREN
 	{

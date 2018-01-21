@@ -23,6 +23,8 @@ void yyerror(char *);
 "set-info"	{ return T_SET_INFO; }
 "declare-fun"	{ return T_DECLARE_FUN; }
 "assert"	{ return T_ASSERT; }
+"minimize"	{ return T_MINIMIZE; }
+"maximize"	{ return T_MAXIMIZE; }
 "check-sat"	{ return T_CHECK_SAT; }
 "get-all-models"	{ return T_GET_ALL_MODELS; }
 "count-models"	{ return T_COUNT_MODELS; }
@@ -75,7 +77,7 @@ bv[0-9]+	{
 			return T_CONST;
 		}
 
-[a-zA-Z]+[a-zA-Z0-9]* 	{
+[a-zA-Z_]+[a-zA-Z0-9]* 	{
 			yylval.text=xstrdup(yytext);
 			return T_ID;
 		}

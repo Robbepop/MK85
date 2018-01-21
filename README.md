@@ -45,6 +45,8 @@ This is what I did.
 
 Hence, in order to fully understand MK85, you can first try to understand my SAT Python-based examples.
 
+21-Jan-2018: minimize/maximize using Open-WBO solver.
+
 ## Internals
 
 There are two main structures.

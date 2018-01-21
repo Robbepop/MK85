@@ -82,6 +82,7 @@ struct expr* create_ITE(struct expr* sel, struct expr* t, struct expr* f);
 struct SMT_var* create_variable(const char *name, int type, int width, int internal);
 void init();
 void create_assert (struct expr* e);
+void create_min_max (struct expr* e, bool min_max);
 void check_sat();
 void get_model();
 void get_all_models(bool dump_variables);

@@ -555,7 +555,7 @@ void add_Tseitin_OR2(int v1, int v2, int var_out)
 void add_FA(int a, int b, int cin, int s, int cout)
 {
 	add_comment("%s inputs=%d, %d, cin=%d, s=%d, cout=%d", __FUNCTION__, a, b, cin, s, cout);
-#if 0
+#if 1
 	// full-adder, as found by Mathematica using truth table:
 	// TODO which is faster?
         add_clause4(-a, -b, -cin, s);
@@ -573,6 +573,8 @@ void add_FA(int a, int b, int cin, int s, int cout)
         add_clause3(-cin, cout, s);
         add_clause3(cin, -cout, -s);
 #endif
+#if 0
+	// do the same, using gates and Tseitin transformations.
 	// allocate 3 "joint" variables:
 	int XOR1_out=SAT_next_var_no++;
 	int AND1_out=SAT_next_var_no++;
@@ -584,6 +586,7 @@ void add_FA(int a, int b, int cin, int s, int cout)
 	add_Tseitin_AND(XOR1_out, cin, AND1_out);
 	add_Tseitin_AND(a, b, AND2_out);
 	add_Tseitin_OR2(AND1_out, AND2_out, cout);
+#endif
 };
 
 void generate_adder(struct SMT_var* a, struct SMT_var* b, struct SMT_var *carry_in, // inputs
@@ -1267,8 +1270,28 @@ void create_assert (struct expr* e)
 	printf ("\n");
 */
 	struct SMT_var* v=generate(e);
-	add_comment ("create_assert() id=%s var=%d", v->id, v->SAT_var);
+	add_comment ("%s() id=%s var=%d", __FUNCTION__, v->id, v->SAT_var);
 	add_clause1 (v->SAT_var); // v must be True
+};
+
+bool create_min_max_called=false;
+
+void create_min_max (struct expr* e, bool min_max)
+{
+	if (create_min_max_called)
+		die ("Due to limitations of MK85, only one minimize/maximize command is allowed\n");
+
+	struct SMT_var* v=generate(e);
+	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
+	assert (v->type==TY_BITVEC);
+	for (int i=0; i<v->width; i++)
+	{
+		if (min_max==false)
+			add_soft_clause1(/* weight */ 1<<i, -(v->SAT_var+i)); // minimize
+		else
+			add_soft_clause1(/* weight */ 1<<i, v->SAT_var+i); // maximize
+	};
+	create_min_max_called=true;
 };
 
 bool sat=false;
@@ -1282,7 +1305,10 @@ void write_CNF(const char *fname)
 
 	FILE* f=fopen (fname, "wt");
 	assert (f!=NULL);
-	fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
+	if (maxsat)
+		fprintf (f, "p wcnf %d %d %d\n", SAT_next_var_no-1, clauses_t, hard_clause_weight);
+	else
+		fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
 	for (auto c=clauses.begin(); c!=clauses.end(); c++)
 	{
 		int type=c->first;
@@ -1325,9 +1351,9 @@ bool run_SAT_solver_and_get_solution()
 	write_CNF ("tmp.cnf");
 
 	unlink ("result.txt");
-	int rt=system ("minisat tmp.cnf result.txt > /dev/null");
+	int rt=system ("./Linux-x86/minisat tmp.cnf result.txt > /dev/null");
 	if (rt==32512)
-		die ("Error: minisat execitable not found. install it please.\n");
+		die ("Error: minisat executable not found.\n");
 
 	// parse SAT response:
 
@@ -1366,9 +1392,53 @@ bool run_SAT_solver_and_get_solution()
 	return false; // make compiler happy
 };
 
+bool run_WBO_solver_and_get_solution()
+{
+	write_CNF ("tmp.wcnf");
+
+	unlink ("result.txt");
+	int rt=system ("./Linux-x86/open-wbo tmp.wcnf > result.txt");
+	if (rt==32512)
+		die ("Error: open-wbo executable not found.\n");
+
+	// parse SAT response:
+
+	size_t buflen=SAT_next_var_no*10;
+	char *buf=(char*)xmalloc(buflen);
+	assert(buf);
+
+	FILE* f=fopen ("result.txt", "rt");
+	while (fgets (buf, buflen, f)!=NULL)
+	{
+		if (buf[0]=='s')
+		{
+			if (memcmp (buf, "s UNSAT", 7)==0)
+				return false;
+		}
+		else if (buf[0]=='v')
+		{
+			size_t total;
+			solution=list_of_numbers_to_array(buf+2, SAT_next_var_no, &total);
+			fill_variables_from_SAT_solver_response(solution);
+			fclose (f);
+			return true;
+		};
+	};
+
+	return false; // make compiler happy
+};
+
+
 void check_sat()
 {
-	if (run_SAT_solver_and_get_solution())
+	bool rt;
+
+	if (maxsat)
+		rt=run_WBO_solver_and_get_solution();
+	else
+		rt=run_SAT_solver_and_get_solution();
+
+	if (rt)
 	{
 		sat=true;
 		printf ("sat\n");
