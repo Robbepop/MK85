@@ -1,5 +1,6 @@
 #include <string>
 #include <list>
+#include <algorithm>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -389,12 +390,8 @@ struct SMT_var* create_internal_variable(const char* prefix, int type, int width
 };
 
 int clauses_t=0;
-std::list<std::string> clauses;
-
-void add_line(char *s)
-{
-	clauses.push_back(s);
-}
+// int - type. 0 - hard clause, 1 - soft clause, 2 - comment
+std::list<std::pair<int, std::string>> clauses;
 
 void add_clause(const char* fmt, ...)
 {
@@ -407,14 +404,29 @@ void add_clause(const char* fmt, ...)
 	char* buf=(char*)xmalloc(buflen);
 
 	va_start (va, fmt);
-	int written=vsnprintf (buf, buflen, fmt, va);
+	size_t written=vsnprintf (buf, buflen, fmt, va);
 	va_end(va);
 
 	assert (written<buflen);
 	strcpy (buf+strlen(buf), " 0");
 
-	add_line(buf);
+	clauses.push_back(std::make_pair(0, buf));
 	clauses_t++;
+};
+
+int max_weight=0;
+bool maxsat=false;
+
+void add_soft_clause1(int weight, int v1)
+{
+	char buf[128];
+	sprintf (buf, "%d %d 0", weight, v1);
+
+	clauses.push_back(std::make_pair(1, buf));
+	clauses_t++;
+
+	max_weight=std::max(max_weight, weight);
+	maxsat=true;
 };
 
 void add_clause1(int v1)
@@ -456,12 +468,12 @@ void add_comment(const char* fmt, ...)
 		buf[2+i]=' ';
 
 	va_start (va, fmt);
-	int written=vsnprintf (buf+2+current_indent, buflen, fmt, va);
+	size_t written=vsnprintf (buf+2+current_indent, buflen, fmt, va);
 	va_end(va);
 
 	assert (written<buflen);
 
-	add_line(buf);
+	clauses.push_back(std::make_pair(2, buf));
 };
 
 struct SMT_var* generate_const(uint32_t val, int width)
@@ -1073,7 +1085,7 @@ struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned wid
 {
 	struct SMT_var* rt=create_internal_variable("extracted", TY_BITVEC, width);
 	// FIXME: use _BV function
-	for (int i=0; i<width; i++)
+	for (size_t i=0; i<width; i++)
 		add_Tseitin_EQ(rt->SAT_var+i, v->SAT_var+begin+i);
 
 	return rt;
@@ -1263,11 +1275,25 @@ bool sat=false;
 
 void write_CNF(const char *fname)
 {
+	int hard_clause_weight;
+
+	if (maxsat)
+		hard_clause_weight=max_weight+1;
+
 	FILE* f=fopen (fname, "wt");
 	assert (f!=NULL);
 	fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
 	for (auto c=clauses.begin(); c!=clauses.end(); c++)
-		fprintf (f, "%s\n", c->c_str());
+	{
+		int type=c->first;
+		if (type==0 && maxsat)
+			fprintf (f, "%d %s\n", hard_clause_weight, c->second.c_str());
+		else
+		{
+			// comments and soft clauses:
+			fprintf (f, "%s\n", c->second.c_str());
+		};
+	};
 	fclose (f);
 };
 
