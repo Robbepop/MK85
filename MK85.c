@@ -1364,7 +1364,7 @@ void fill_variables_from_SAT_solver_response(int *array)
 	for (struct SMT_var* v=vars; v; v=v->next)
 	{
 		// do not set internal variables, for faster results:
-		if (v->internal)
+		if (dump_internal_variables==false && v->internal)
 			continue;
 
 		v->val=SAT_solution_to_value(&array[v->SAT_var-1], v->width);
