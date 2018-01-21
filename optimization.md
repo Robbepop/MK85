@@ -35,7 +35,7 @@ void create_min_max (struct expr* e, bool min_max)
 };
 ```
 
-Lowest bit of variable to miximize receives weight 1.
+Lowest bit of variable to maximize receives weight 1.
 Second bit receives weight 2.
 Then 4, 8, 16, etc.
 Hence, MaxSAT solver, in order to maximize weights of soft clauses, would maximize the binary variable as well!
