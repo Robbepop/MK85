@@ -51,4 +51,5 @@ fi
 
 ./MK85 examples/optimize/GCD_BV3.smt > tmp && diff tmp examples/optimize/GCD_BV3.correct
 ./MK85 examples/optimize/LCM_BV1.smt > tmp && diff tmp examples/optimize/LCM_BV1.correct
+./MK85 examples/optimize/assign_problem.smt > tmp && diff tmp examples/optimize/assign_problem.correct
 
