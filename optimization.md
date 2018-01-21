@@ -36,6 +36,7 @@ void create_min_max (struct expr* e, bool min_max)
 	...
 };
 ```
+( https://github.com/DennisYurichev/MK85/blob/master/MK85.cc )
 
 Lowest bit of variable to maximize receives weight 1.
 Second bit receives weight 2.
