@@ -66,7 +66,7 @@ Weights from 1 to 32768 to be assigned to specific bits of GCD variable.
 
 Minimization works just as the same, but all bits are inverted.
 
-Now some practical examples:
+Now some practical examples MK85 can already solve:
 [Assignment problem](https://github.com/DennisYurichev/MK85/blob/master/examples/optimize/assign_problem.smt),
 [Finding minimum of function](https://github.com/DennisYurichev/MK85/blob/master/examples/optimize/1959_AHSME_Problem_8.smt),
 [Minimizing cost](https://github.com/DennisYurichev/MK85/blob/master/examples/optimize/popsicles.smt).
