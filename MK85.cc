@@ -1,3 +1,6 @@
+#include <string>
+#include <list>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -419,28 +422,11 @@ struct SMT_var* create_internal_variable(char* prefix, int type, int width)
 };
 
 int clauses_t=0;
-
-struct clause
-{
-	char *c;
-	struct clause* next;
-};
-
-struct clause *clauses=NULL;
-struct clause *last_clause=NULL;
+std::list<std::string> clauses;
 
 void add_line(char *s)
 {
-	if (clauses==NULL)
-		last_clause=clauses=(struct clause*)xmalloc(sizeof(struct clause));
-	else
-	{
-		struct clause *cl=(struct clause*)xmalloc(sizeof(struct clause));
-		last_clause->next=cl;
-		last_clause=cl;
-	};
-	
-	last_clause->c=s;
+	clauses.push_back(s);
 }
 
 void add_clause(const char* fmt, ...)
@@ -461,7 +447,6 @@ void add_clause(const char* fmt, ...)
 	strcpy (buf+strlen(buf), " 0");
 
 	add_line(buf);
-
 	clauses_t++;
 };
 
@@ -1314,8 +1299,8 @@ void write_CNF(char *fname)
 	FILE* f=fopen (fname, "wt");
 	assert (f!=NULL);
 	fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
-	for (struct clause* c=clauses; c; c=c->next)
-		fprintf (f, "%s\n", c->c);
+	for (auto c=clauses.begin(); c!=clauses.end(); c++)
+		fprintf (f, "%s\n", c->c_str());
 	fclose (f);
 };
 

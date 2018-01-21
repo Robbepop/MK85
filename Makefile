@@ -1,5 +1,5 @@
-COPT=-Wall -g -c -O3
-#COPT=-Wall -g -pg -c
+COPT=-Wall -g -c -O3 -std=c++11
+#COPT=-Wall -g -pg -c -std=c++11
 
 all: MK85
 
