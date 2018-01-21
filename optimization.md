@@ -43,6 +43,8 @@ Hence, MaxSAT solver, in order to maximize weights of soft clauses, would maximi
 What is in the WCNF (weighted CNF) file for the GCD example?
 
 ```
+...
+
 c create_min_max(min_max=1) id=GCD var=51
 1 51 0
 2 52 0
