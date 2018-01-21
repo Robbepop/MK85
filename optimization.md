@@ -7,7 +7,9 @@ It was surprisingly easy to add support of it to MK85.
 First, we take MaxSAT/WBO solver [Open-WBO](http://sat.inesc-id.pt/open-wbo/).
 It supports both hard and soft clauses.
 Hard are clauses which are *must* be satisfied.
-Soft are *should* be satisfied, but they are also weighted. The task of MaxSAT solver is to *maximize* sum of weights of soft clauses.
+Soft are *should* be satisfied, but they are also weighted.
+The task of MaxSAT solver is to find such an assignment for variables, so the sum of weights of soft clauses would be
+*maximized*..
 
 This is GCD example rewritten to SMT-LIB format: https://github.com/DennisYurichev/MK85/blob/master/examples/optimize/GCD_BV2.smt
 We are going to find such an assignment, for which GCD variable will be as big as possible (that would not break *hard* constraints, of course).
