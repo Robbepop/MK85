@@ -19,19 +19,20 @@ Whenever my MK85 encounters "minimize/maximize" command, the following function 
 ```c
 void create_min_max (struct expr* e, bool min_max)
 {
-
 	...
 
 	struct SMT_var* v=generate(e);
-	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
+
+	// if "minimize", negate input value:
+	if (min_max==false)
+		v=generate_BVNEG(v);
+
 	assert (v->type==TY_BITVEC);
+	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
+
+	// maximize always. if we need to minimize, $v$ is negated at this point:
 	for (int i=0; i<v->width; i++)
-	{
-		if (min_max==false)
-			add_soft_clause1(/* weight */ 1<<i, -(v->SAT_var+i)); // minimize
-		else
-			add_soft_clause1(/* weight */ 1<<i, v->SAT_var+i); // maximize
-	};
+		add_soft_clause1(/* weight */ 1<<i, v->SAT_var+i);
 
 	...
 };
@@ -69,7 +70,7 @@ c create_min_max(min_max=1) id=GCD var=51
 
 Weights from 1 to 32768 to be assigned to specific bits of GCD variable.
 
-Minimization works just as the same, but all bits are inverted.
+Minimization works just as the same, but the input value is negated.
 
 Now some practical examples MK85 can already solve:
 [Assignment problem](https://github.com/DennisYurichev/MK85/blob/master/examples/optimize/assign_problem.smt),

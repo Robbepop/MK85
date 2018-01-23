@@ -1282,15 +1282,18 @@ void create_min_max (struct expr* e, bool min_max)
 		die ("Due to limitations of MK85, only one minimize/maximize command is allowed\n");
 
 	struct SMT_var* v=generate(e);
-	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
+
+	// if "minimize", negate input value:
+	if (min_max==false)
+		v=generate_BVNEG(v);
+
 	assert (v->type==TY_BITVEC);
+	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
+
+	// maximize always. if we need to minimize, $v$ is negated at this point:
 	for (int i=0; i<v->width; i++)
-	{
-		if (min_max==false)
-			add_soft_clause1(/* weight */ 1<<i, -(v->SAT_var+i)); // minimize
-		else
-			add_soft_clause1(/* weight */ 1<<i, v->SAT_var+i); // maximize
-	};
+		add_soft_clause1(/* weight */ 1<<i, v->SAT_var+i);
+
 	create_min_max_called=true;
 };
 
