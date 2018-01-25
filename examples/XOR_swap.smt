@@ -9,6 +9,9 @@
 
 ; must be unsat, of course
 
+; needless to say that other SMT solvers may use simplification to prove this, MK85 can't do it,
+; it "proves" on SAT level, by absence of counterexample to the expressions.
+
 (set-logic QF_BV)
 (set-info :smt-lib-version 2.0)
 
