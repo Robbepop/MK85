@@ -1290,7 +1290,7 @@ void create_min_max (struct expr* e, bool min_max)
 	assert (v->type==TY_BITVEC);
 	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
 
-	// maximize always. if we need to minimize, $v$ is negated at this point:
+	// maximize always. if we need to minimize, $v$ is already negated at this point:
 	for (int i=0; i<v->width; i++)
 		add_soft_clause1(/* weight */ 1<<i, v->SAT_var+i);
 
