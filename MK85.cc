@@ -1124,7 +1124,7 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 	for (int i=1; i<w; i++)
 		product=generate_BVADD(product, partial_products2[i]);
 
-	// fix high part at 0? not yet.
+	// fix high part at 0?
 	// TODO use _BV function:
 	if (type==1)
 		for (int i=w; i<w*2; i++)
