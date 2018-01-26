@@ -41,7 +41,9 @@ void yyerror(char *);
 "bvxor"		{ return T_BVXOR; }
 "bvadd"		{ return T_BVADD; }
 "bvand"		{ return T_BVAND; }
+"bvor"		{ return T_BVOR; }
 "bvsub"		{ return T_BVSUB; }
+"bvmul_no_overflow" { return T_BVMUL_NO_OVERFLOW; }
 "bvmul"		{ return T_BVMUL; }
 "bvudiv"	{ return T_BVUDIV; }
 "bvurem"	{ return T_BVUREM; }

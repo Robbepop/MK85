@@ -1,4 +1,5 @@
 ; copypasted from http://fmv.jku.at/biere/talks/Biere-SYNASC17-talk.pdf
+; prove that x*y=y*x
 ; must be unsat, of course
 
 (set-logic QF_BV)

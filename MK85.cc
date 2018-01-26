@@ -281,6 +281,7 @@ struct SMT_var
 	int width; // in bits, 1 for bool
 	// TODO: uint64_t? bitmap?
 	uint32_t val; // what we've got from from SAT-solver's results. 0/1 for Bool
+	struct expr* e;
 	struct SMT_var* next;
 };
 
@@ -894,7 +895,8 @@ struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
 		{
 			printf ("line %d. = can't work on bitvectors of different widths. you supplied %d and %d\n",
 				yylineno, v1->width, v2->width);
-			printf ("v1=%s, v2=%s\n", v1->id, v2->id);
+			printf ("v1. id==%s, e=", v1->id); print_expr(v1->e); printf ("\n");
+			printf ("v2. id==%s, e=", v2->id); print_expr(v2->e); printf ("\n");
 			exit(0);
 		};
 		add_comment ("generate_EQ for two bitvectors, v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]", 
@@ -1094,7 +1096,10 @@ struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned wid
 	return rt;
 };
 
-struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y)
+// type:
+// 0 - usual
+// 1 - no overflow
+struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 {
 	assert (X->type==TY_BITVEC);
 	assert (Y->type==TY_BITVEC);
@@ -1120,8 +1125,10 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y)
 		product=generate_BVADD(product, partial_products2[i]);
 
 	// fix high part at 0? not yet.
-	//for (int i=w; i<w*2; i++)
-	//	add_Tseitin_EQ(product->SAT_var+i, var_always_false->SAT_var);	
+	// TODO use _BV function:
+	if (type==1)
+		for (int i=w; i<w*2; i++)
+			add_Tseitin_EQ(product->SAT_var+i, var_always_false->SAT_var);
 
 	// leave only low part of product, same width as each input:
 	return generate_extract(product, 0, w);
@@ -1184,80 +1191,98 @@ struct SMT_var* generate(struct expr* e)
 		if(rt==NULL)
 			die ("Variable %s hasn't been declared\n", e->id);
 		//printf ("generate -> %d (by id %s)\n", rt->var_no, e->id);
+		rt->e=e;
 		return rt;
 	};
 
 	if (e->type==EXPR_CONST)
 	{
 		//printf ("generate() const\n");
-		return generate_const(e->const_val, e->const_width);
+		struct SMT_var* rt=generate_const(e->const_val, e->const_width);
+		rt->e=e;
+		return rt;
 	};
 	
 	if (e->type==EXPR_ZERO_EXTEND)
 	{
-		return generate_zero_extend(generate(e->op1), e->const_val);
+		struct SMT_var* rt=generate_zero_extend(generate(e->op1), e->const_val);
+		rt->e=e;
+		return rt;
 	};
 
 	if (e->type==EXPR_EXTRACT)
 	{
-		return generate_extract(generate(e->op1), e->const_val, e->const_width);
+		struct SMT_var* rt=generate_extract(generate(e->op1), e->const_val, e->const_width);
+		rt->e=e;
+		return rt;
 	};
 
 	if (e->type==EXPR_UNARY)
 	{
+		struct SMT_var* rt;
 		switch (e->op)
 		{
-			case OP_NOT:		return generate_NOT (generate (e->op1));
-			case OP_BVNOT:		return generate_BVNOT (generate (e->op1));
-			case OP_BVNEG:		return generate_BVNEG (generate (e->op1));
-			case OP_BVSHL1:		return generate_shift_left (generate (e->op1), 1);
-			case OP_BVSHR1:		return generate_shift_right (generate (e->op1), 1);
+			case OP_NOT:		rt=generate_NOT (generate (e->op1)); break;
+			case OP_BVNOT:		rt=generate_BVNOT (generate (e->op1)); break;
+			case OP_BVNEG:		rt=generate_BVNEG (generate (e->op1)); break;
+			case OP_BVSHL1:		rt=generate_shift_left (generate (e->op1), 1); break;
+			case OP_BVSHR1:		rt=generate_shift_right (generate (e->op1), 1); break;
 			default:		assert(0);
 		};
+		rt->e=e;
+		return rt;
 	};
 	if (e->type==EXPR_BINARY)
 	{
 		struct SMT_var* v1=generate(e->op1);
 		struct SMT_var* v2=generate(e->op2);
+		struct SMT_var* rt;
 		switch (e->op)
 		{
-			case OP_EQ:		return generate_EQ (v1, v2);
-			case OP_NEQ:		return generate_NEQ (v1, v2);
-			case OP_OR:		return generate_OR (v1, v2);
-			case OP_XOR:		return generate_XOR (v1, v2);
-			case OP_AND:		return generate_AND (v1, v2);
-			case OP_BVXOR:		return generate_BVXOR (v1, v2);
-			case OP_BVAND:		return generate_BVAND (v1, v2);
-			case OP_BVADD:		return generate_BVADD (v1, v2);
-			case OP_BVSUB:		return generate_BVSUB (v1, v2);
-			case OP_BVMUL:		return generate_BVMUL (v1, v2);
-			case OP_BVUGE:		return generate_BVUGE (v1, v2);
-			case OP_BVULE:		return generate_BVULE (v1, v2);
-			case OP_BVUGT:		return generate_BVUGT (v1, v2);
-			case OP_BVULT:		return generate_BVULT (v1, v2);
+			case OP_EQ:		rt=generate_EQ (v1, v2); break;
+			case OP_NEQ:		rt=generate_NEQ (v1, v2); break;
+			case OP_OR:		rt=generate_OR (v1, v2); break;
+			case OP_XOR:		rt=generate_XOR (v1, v2); break;
+			case OP_AND:		rt=generate_AND (v1, v2); break;
+			case OP_BVXOR:		rt=generate_BVXOR (v1, v2); break;
+			case OP_BVAND:		rt=generate_BVAND (v1, v2); break;
+			case OP_BVADD:		rt=generate_BVADD (v1, v2); break;
+			case OP_BVSUB:		rt=generate_BVSUB (v1, v2); break;
+			case OP_BVMUL:		rt=generate_BVMUL (v1, v2, 0); break;
+			case OP_BVMUL_NO_OVERFLOW:	rt=generate_BVMUL (v1, v2, 1); break;
+			case OP_BVUGE:		rt=generate_BVUGE (v1, v2); break;
+			case OP_BVULE:		rt=generate_BVULE (v1, v2); break;
+			case OP_BVUGT:		rt=generate_BVUGT (v1, v2); break;
+			case OP_BVULT:		rt=generate_BVULT (v1, v2); break;
 			case OP_BVSUBGE:
 						{
 							struct SMT_var *output;
 							struct SMT_var *cond;
 							generate_BVSUBGE (var_always_true, v1, v2, &output, &cond);
+							output->e=e;
 							return output;
 						};
-			case OP_BVUDIV:		return generate_BVUDIV (v1, v2);
-			case OP_BVUREM:		return generate_BVUREM (v1, v2);
-			case OP_BVSHL:		return generate_BVSHL (generate (e->op1), generate (e->op2));
-			case OP_BVLSHR:		return generate_BVLSHR (generate (e->op1), generate (e->op2));
+			case OP_BVUDIV:		rt=generate_BVUDIV (v1, v2); break;
+			case OP_BVUREM:		rt=generate_BVUREM (v1, v2); break;
+			case OP_BVSHL:		rt=generate_BVSHL (generate (e->op1), generate (e->op2)); break;
+			case OP_BVLSHR:		rt=generate_BVLSHR (generate (e->op1), generate (e->op2)); break;
 			default:		assert(0);
 		}
+		rt->e=e;
+		return rt;
 	};
 	if (e->type==EXPR_TERNARY)
 	{
 		assert (e->op==OP_ITE);
+		struct SMT_var* rt;
 
 		struct SMT_var* sel=generate(e->op1);
 		struct SMT_var* t=generate(e->op2);
 		struct SMT_var* f=generate(e->op3);
 
-		return generate_ITE(sel, t, f);
+		rt=generate_ITE(sel, t, f);
+		rt->e=e;
+		return rt;
 	};
 	assert(0);
 };

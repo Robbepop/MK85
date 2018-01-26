@@ -12,8 +12,6 @@ minisat is then executed, as an external SAT solver.
 
 Stay tuned, it will be evolved.
 
-Aside from SMT-LIB standard, I also added two more commands: (get-all-models) and (count-models) (see "tests").
-
 Requires: flex/bison.
 In Ubuntu Linux, type "make".
 It wasn't checked on other OS-es.
@@ -26,6 +24,14 @@ First, you can check your .smt files using other SMT solver (I used z3, Boolecto
 ## Thanks
 
 [Armin Biere](http://fmv.jku.at/biere/) patiently helped with my endless boring-to-death questions.
+
+## Non-standard SMT-LIB commands
+
+Aside from SMT-LIB standard, I also added two more commands: (get-all-models) and (count-models) (see "tests").
+
+## Non-standard SMT-LIB functions
+
+bvmul_no_overflow, see: https://github.com/DennisYurichev/MK85/blob/master/examples/surd.smt
 
 ## Name
 
