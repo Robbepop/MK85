@@ -275,7 +275,7 @@ int SAT_next_var_no=1;
 struct SMT_var
 {
 	int type; // TY_BOOL, TY_BITVEC
-	bool internal; // 0/1, 1 for internal
+	bool internal; // true for internal
 	char* id; // name
 	int SAT_var; // in SAT instance
 	int width; // in bits, 1 for bool
