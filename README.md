@@ -5,6 +5,7 @@ It supports only bools and bitvecs. No integers, let alone reals and arrays and 
 Its complexity is comparable to simple LISP interpreter.
 
 However, it can serve as education tool (hopefully).
+This is also my playground.
 
 It parses input SMT-LIB file (see "tests" and "examples"), constructs digital circuit, which is then converted to CNF form using Tseitin transformations.
 This is also called "bitblasting".
@@ -69,4 +70,8 @@ For bitvector of width w, SMT variable occupies [SAT_var, SAT_var+w-1] SAT varia
 It has no optimizations at all.
 If it encounters two "(bvadd x y)", two adders would be generated instead of one.
 Maybe SAT-solver (minisat in this case) could optimize this out, or maybe not.
+
+## Further reading
+
+I've found this paper helpful: [Martin Finke - Equisatisfiable SAT Encodings of Arithmetical Operations](http://www.martin-finke.de/documents/Masterarbeit_bitblast_Finke.pdf).
 
