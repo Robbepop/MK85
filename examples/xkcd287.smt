@@ -31,7 +31,7 @@
 	)
 )
 
-(check-sat)
-(get-model)
-;(get-all-models)
+;(check-sat)
+;(get-model)
+(get-all-models)
 
