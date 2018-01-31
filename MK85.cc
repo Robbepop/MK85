@@ -1,6 +1,9 @@
+#include <iterator>
 #include <string>
 #include <list>
 #include <algorithm>
+#include <iostream>
+#include <sstream>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -390,18 +393,26 @@ struct SMT_var* create_internal_variable(const char* prefix, int type, int width
 	return create_variable(tmp, type, width, 1);
 };
 
+enum clause_type
+{
+	HARD_CLASUE,
+	SOFT_CLAUSE,
+	COMMENT
+};
+
 class clause
 {
 public:
-	// int - type. 0 - hard clause, 1 - soft clause, 2 - comment
-	int type;
-	std::string s;
-	std::list<int> li;
+	enum clause_type type;
+	std::string s; // if COMMENT
+	int weight; // if SOFT_CLAUSE
+	std::list<int> li; // if HARD_CLASUE/SOFT_CLAUSE
 };
 
 int clauses_t=0;
 std::list<class clause> clauses;
 
+/*
 void add_clause(const char* fmt, ...)
 {
 	va_list va;
@@ -425,20 +436,20 @@ void add_clause(const char* fmt, ...)
 	clauses.push_back(c);
 	clauses_t++;
 };
+*/
 
 int max_weight=0;
 bool maxsat=false;
 
 void add_soft_clause1(int weight, int v1)
 {
-	char buf[128];
-	sprintf (buf, "%d %d 0", weight, v1);
+	clauses_t++;
 
 	class clause c;
-	c.type=1;
-	c.s=buf;
+	c.type=SOFT_CLAUSE;
+	c.weight=weight;
+	c.li.push_back(v1);
 	clauses.push_back(c);
-	clauses_t++;
 
 	max_weight=std::max(max_weight, weight);
 	maxsat=true;
@@ -446,22 +457,44 @@ void add_soft_clause1(int weight, int v1)
 
 void add_clause1(int v1)
 {
-	add_clause ("%d", v1);
+	clauses_t++;
+	class clause c;
+	c.type=HARD_CLASUE;
+	c.li.push_back(v1);
+	clauses.push_back(c);
 };
 
 void add_clause2(int v1, int v2)
 {
-	add_clause ("%d %d", v1, v2);
+	clauses_t++;
+	class clause c;
+	c.type=HARD_CLASUE;
+	c.li.push_back(v1);
+	c.li.push_back(v2);
+	clauses.push_back(c);
 };
 
 void add_clause3(int v1, int v2, int v3)
 {
-	add_clause ("%d %d %d", v1, v2, v3);
+	clauses_t++;
+	class clause c;
+	c.type=HARD_CLASUE;
+	c.li.push_back(v1);
+	c.li.push_back(v2);
+	c.li.push_back(v3);
+	clauses.push_back(c);
 };
 
 void add_clause4(int v1, int v2, int v3, int v4)
 {
-	add_clause ("%d %d %d %d", v1, v2, v3, v4);
+	clauses_t++;
+	class clause c;
+	c.type=HARD_CLASUE;
+	c.li.push_back(v1);
+	c.li.push_back(v2);
+	c.li.push_back(v3);
+	c.li.push_back(v4);
+	clauses.push_back(c);
 };
 
 int current_indent=0;
@@ -489,7 +522,7 @@ void add_comment(const char* fmt, ...)
 	assert (written<buflen);
 
 	class clause c;
-	c.type=2;
+	c.type=COMMENT;
 	c.s=buf;
 	clauses.push_back(c);
 };
@@ -565,7 +598,7 @@ void add_Tseitin_XOR(int v1, int v2, int v3)
 void add_Tseitin_OR2(int v1, int v2, int var_out)
 {
 	add_comment ("%s %d=%d|%d", __FUNCTION__, var_out, v1, v2);
-	add_clause("%d %d -%d", v1, v2, var_out);
+	add_clause3(v1, v2, -var_out);
 	add_clause2(-v1, var_out);
 	add_clause2(-v2, var_out);
 };
@@ -872,8 +905,16 @@ struct SMT_var* generate_BVXOR(struct SMT_var* v1, struct SMT_var* v2)
 void add_Tseitin_OR_list(int var, int width, int var_out)
 {
 	add_comment ("%s(var=%d, width=%d, var_out=%d)", __FUNCTION__, var, width, var_out);
-	char* tmp=create_string_of_numbers_in_range(var, width);
-	add_clause("%s -%d", tmp, var_out);
+	//char* tmp=create_string_of_numbers_in_range(var, width);
+	//add_clause("%s -%d", tmp, var_out);
+	class clause c;
+	c.type=HARD_CLASUE;
+	for (int i=var; i<var+width; i++)
+		c.li.push_back(i);
+	c.li.push_back(-var_out);
+	clauses.push_back(c);
+	clauses_t++;
+
 	for (int i=0; i<width; i++)
 		add_clause2(-(var+i), var_out);
 };
@@ -1341,6 +1382,13 @@ void create_min_max (struct expr* e, bool min_max)
 
 bool sat=false;
 
+std::string remove_trailing_space (std::string s)
+{
+	if (s.back()==' ')
+		return remove_trailing_space(s.substr(0, s.length()-1));
+	return s;
+};
+
 void write_CNF(const char *fname)
 {
 	int hard_clause_weight;
@@ -1356,12 +1404,29 @@ void write_CNF(const char *fname)
 		fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
 	for (auto c : clauses)
 	{
-		int type=c.type;
-		if (type==0 && maxsat)
-			fprintf (f, "%d %s\n", hard_clause_weight, c.s.c_str());
-		else
+		//c.type;
+		if (c.type==SOFT_CLAUSE)
 		{
-			// comments and soft clauses:
+			assert(maxsat);
+			//fprintf (f, "%d %s\n", hard_clause_weight, c.s.c_str());
+			std::stringstream result;
+			std::copy(c.li.begin(), c.li.end(), std::ostream_iterator<int>(result, " "));
+			std::string s=remove_trailing_space(result.str());
+			fprintf (f, "%d %s 0\n", c.weight, s.c_str());
+		}
+		else if (c.type==HARD_CLASUE)
+		{
+			// https://stackoverflow.com/questions/2518979/how-to-transform-a-vectorint-into-a-string
+			std::stringstream result;
+			std::copy(c.li.begin(), c.li.end(), std::ostream_iterator<int>(result, " "));
+			std::string s=remove_trailing_space(result.str());
+			if (maxsat)
+				fprintf (f, "%d %s 0\n", hard_clause_weight, s.c_str());
+			else
+				fprintf (f, "%s 0\n", s.c_str());
+		}
+		else if (c.type==COMMENT)
+		{
 			fprintf (f, "%s\n", c.s.c_str());
 		};
 	};
@@ -1513,9 +1578,15 @@ void get_all_models(bool dump_variables)
 			dump_all_variables(dump_internal_variables);
 		// add negated solution:
 		negate_all_elements_in_int_array(solution);
-		char* str=list_of_ints_to_str(solution);
+		//char* str=list_of_ints_to_str(solution);
 		add_comment("negated solution");
-		add_clause(str);
+		//add_clause(str);
+		class clause c;
+		c.type=HARD_CLASUE;
+		for (int i=0; solution[i]; i++)
+			c.li.push_back(solution[i]);
+		clauses.push_back(c);
+		clauses_t++;
 	};
 	printf ("Model count: %d\n", total);
 };
