@@ -390,9 +390,17 @@ struct SMT_var* create_internal_variable(const char* prefix, int type, int width
 	return create_variable(tmp, type, width, 1);
 };
 
+class clause
+{
+public:
+	// int - type. 0 - hard clause, 1 - soft clause, 2 - comment
+	int type;
+	std::string s;
+	std::list<int> li;
+};
+
 int clauses_t=0;
-// int - type. 0 - hard clause, 1 - soft clause, 2 - comment
-std::list<std::pair<int, std::string>> clauses;
+std::list<class clause> clauses;
 
 void add_clause(const char* fmt, ...)
 {
@@ -411,7 +419,10 @@ void add_clause(const char* fmt, ...)
 	assert (written<buflen);
 	strcpy (buf+strlen(buf), " 0");
 
-	clauses.push_back(std::make_pair(0, buf));
+	class clause c;
+	c.type=0;
+	c.s=buf;
+	clauses.push_back(c);
 	clauses_t++;
 };
 
@@ -423,7 +434,10 @@ void add_soft_clause1(int weight, int v1)
 	char buf[128];
 	sprintf (buf, "%d %d 0", weight, v1);
 
-	clauses.push_back(std::make_pair(1, buf));
+	class clause c;
+	c.type=1;
+	c.s=buf;
+	clauses.push_back(c);
 	clauses_t++;
 
 	max_weight=std::max(max_weight, weight);
@@ -474,7 +488,10 @@ void add_comment(const char* fmt, ...)
 
 	assert (written<buflen);
 
-	clauses.push_back(std::make_pair(2, buf));
+	class clause c;
+	c.type=2;
+	c.s=buf;
+	clauses.push_back(c);
 };
 
 struct SMT_var* generate_const(uint32_t val, int width)
@@ -1339,13 +1356,13 @@ void write_CNF(const char *fname)
 		fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
 	for (auto c : clauses)
 	{
-		int type=c.first;
+		int type=c.type;
 		if (type==0 && maxsat)
-			fprintf (f, "%d %s\n", hard_clause_weight, c.second.c_str());
+			fprintf (f, "%d %s\n", hard_clause_weight, c.s.c_str());
 		else
 		{
 			// comments and soft clauses:
-			fprintf (f, "%s\n", c.second.c_str());
+			fprintf (f, "%s\n", c.s.c_str());
 		};
 	};
 	fclose (f);
