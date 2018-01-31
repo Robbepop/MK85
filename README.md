@@ -9,7 +9,6 @@ This is also my playground.
 
 It parses input SMT-LIB file (see "tests" and "examples"), constructs digital circuit, which is then converted to CNF form using Tseitin transformations.
 This is also called "bitblasting".
-minisat is then executed, as an external SAT solver.
 
 Stay tuned, it will be evolved.
 
@@ -54,6 +53,11 @@ Hence, in order to fully understand MK85, you can first try to understand my SAT
 
 21-Jan-2018: minimize/maximize using Open-WBO solver: https://github.com/DennisYurichev/MK85/blob/master/optimization.md
 
+31-Jan-2018: PicoSAT and incremental SAT. Thanks to incremental SAT, examples involving model counting/enumeration are now way faster, including these:
+https://github.com/DennisYurichev/MK85/blob/master/examples/factorize.smt
+https://github.com/DennisYurichev/MK85/blob/master/examples/2.smt
+https://github.com/DennisYurichev/MK85/blob/master/examples/3.smt
+
 ## Internals
 
 There are two main structures.
@@ -69,7 +73,7 @@ For bitvector of width w, SMT variable occupies [SAT_var, SAT_var+w-1] SAT varia
 
 It has no optimizations at all.
 If it encounters two "(bvadd x y)", two adders would be generated instead of one.
-Maybe SAT-solver (minisat in this case) could optimize this out, or maybe not.
+Maybe SAT-solver (minisat/picosat in this case) could optimize this out, or maybe not.
 
 ## Further reading
 

@@ -3,9 +3,12 @@ COPT=-Wall -g -c -O3 -std=c++11
 
 all: MK85
 
-MK85: lex.yy.o y.tab.o MK85.o utils.o
+MK85: lex.yy.o y.tab.o MK85.o utils.o picosat.o
 	#g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
-	g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -o MK85
+	g++ MK85.o y.tab.o lex.yy.o utils.o picosat.o -L/usr/local/lib/ -g -o MK85
+
+picosat.o: picosat/picosat.h picosat/picosat.c
+	gcc $(COPT) picosat/picosat.c
 
 utils.o: utils.cc utils.hh
 	g++ $(COPT) utils.cc

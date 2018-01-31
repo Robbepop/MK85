@@ -16,6 +16,11 @@
 #include "MK85.hh"
 #include "utils.hh"
 
+extern "C"
+{
+#include "picosat/picosat.h"
+}
+
 struct SMT_var* var_always_false=NULL;
 struct SMT_var* var_always_true=NULL;
 
@@ -1417,7 +1422,7 @@ void fill_variables_from_SAT_solver_response(int *array)
 
 int* solution;
 
-bool run_SAT_solver_and_get_solution()
+bool run_minisat_and_get_solution()
 {
 	write_CNF ("tmp.cnf");
 
@@ -1463,6 +1468,57 @@ bool run_SAT_solver_and_get_solution()
 	return false; // make compiler happy
 };
 
+void add_clauses_to_picosat(struct PicoSAT *p)
+{
+	for (auto c : clauses)
+	{
+		if (c.type==HARD_CLASUE)
+		{
+			for (auto i : c.li)
+				picosat_add (p, i);
+			picosat_add(p, 0);
+		}
+	};
+};
+
+int* fill_variables_from_picosat(struct PicoSAT *p)
+{
+	int *array=(int*)xmalloc(sizeof(int)*(SAT_next_var_no-1));
+	for (int i=0; i<SAT_next_var_no-1; i++)
+		array[i]=picosat_deref(p, i+1);
+	fill_variables_from_SAT_solver_response(array);
+	//xfree(array);
+	return array;
+};
+
+bool run_picosat_and_get_solution()
+{
+	assert (maxsat==false);
+	struct PicoSAT *p=picosat_init ();
+
+	add_clauses_to_picosat(p);
+
+	int res=picosat_sat (p,-1);
+	if (res==20)
+		return false;
+	else if (res==10)
+	{
+		fill_variables_from_picosat(p);
+		picosat_reset(p);
+		return true;
+	}
+	else
+	{
+		assert(0);
+	};
+};
+
+bool run_SAT_solver_and_get_solution()
+{
+	//return run_minisat_and_get_solution();
+	return run_picosat_and_get_solution();
+};
+
 bool run_WBO_solver_and_get_solution()
 {
 	write_CNF ("tmp.wcnf");
@@ -1499,7 +1555,6 @@ bool run_WBO_solver_and_get_solution()
 	return false; // make compiler happy
 };
 
-
 void check_sat()
 {
 	bool rt;
@@ -1529,27 +1584,67 @@ void get_model()
 		printf ("(error \"model is not available\")\n");
 }
 
-void get_all_models(bool dump_variables)
+void negate_solution_and_add_as_constraint(int *solution)
+{
+	negate_all_elements_in_int_array(solution);
+	add_comment("negated solution");
+	class clause c;
+	c.type=HARD_CLASUE;
+	for (int i=0; solution[i]; i++)
+		c.li.push_back(solution[i]);
+	clauses.push_back(c);
+	clauses_t++;
+};
+
+void minisat_get_all_models(bool dump_variables)
 {
 	int total=0;
-	while (run_SAT_solver_and_get_solution())
+	while (run_minisat_and_get_solution())
 	{
 		total++;
 		if (dump_variables)
 			dump_all_variables(dump_internal_variables);
-		// add negated solution:
-		negate_all_elements_in_int_array(solution);
-		//char* str=list_of_ints_to_str(solution);
-		add_comment("negated solution");
-		//add_clause(str);
-		class clause c;
-		c.type=HARD_CLASUE;
-		for (int i=0; solution[i]; i++)
-			c.li.push_back(solution[i]);
-		clauses.push_back(c);
-		clauses_t++;
+		negate_solution_and_add_as_constraint(solution);
+
 	};
 	printf ("Model count: %d\n", total);
+};
+
+void picosat_get_all_models(bool dump_variables)
+{
+	assert (maxsat==false);
+	int total=0;
+	struct PicoSAT *p=picosat_init ();
+
+	add_clauses_to_picosat(p);
+
+	int res;
+
+	while ((res=picosat_sat(p,-1))==10)
+	{
+		total++;
+		int *solution=fill_variables_from_picosat(p);
+		if (dump_variables)
+			dump_all_variables(dump_internal_variables);
+
+		for (int v=0; v<SAT_next_var_no-1; v++)
+		{
+			// add negated:
+			if (solution[v]<0)
+				picosat_add(p, v+1);
+			else
+				picosat_add(p, -(v+1));
+		};
+		picosat_add(p, 0);
+	};
+	picosat_reset(p);
+	printf ("Model count: %d\n", total);
+};
+
+void get_all_models(bool dump_variables)
+{
+	//minisat_get_all_models(dump_variables);
+	picosat_get_all_models(dump_variables);
 };
 
 void init()
