@@ -77,7 +77,8 @@ Maybe SAT-solver (minisat/picosat in this case) could optimize this out, or mayb
 
 ## Further reading
 
-I've found these papers helpful: 
+I've found these papers/articles helpful: 
 * [Armin Biere - Using High Performance SAT and QBF Solvers](http://fmv.jku.at/biere/talks/Biere-TPTPA11.pdf)
+* https://en.wikipedia.org/wiki/Tseytin_transformation
 * [Martin Finke - Equisatisfiable SAT Encodings of Arithmetical Operations](http://www.martin-finke.de/documents/Masterarbeit_bitblast_Finke.pdf)
 

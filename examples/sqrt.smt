@@ -7,7 +7,7 @@
 (assert (= out #x00003b19))
 (assert (bvult x #x00010000))
 
-; N.B.: ToySMT has no idea about square roots!
+; N.B.: MK85 has no idea about square roots!
 (assert (= (bvmul x x) out))
 
 (check-sat)
