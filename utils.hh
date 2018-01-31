@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+#include <list>
+#include <string>
+
 void* xmalloc(size_t size);
 void xfree (void* p);
 char* xstrdup(const char *s);
@@ -16,4 +19,6 @@ size_t count_ints_in_array(int *a);
 char *list_of_ints_to_str(int *a);
 uint32_t mylog2(const uint32_t x);
 int popcount64c(uint64_t x);
+std::string remove_trailing_space (std::string s);
+std::string cxx_list_of_ints_to_string (std::list<int> l);
 

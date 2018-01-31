@@ -6,6 +6,12 @@
 
 #include <stdint.h>
 
+#include <list>
+#include <string>
+#include <iterator>
+#include <iostream>
+#include <sstream>
+
 // Boehm garbage collector:
 //#include <gc.h>
 
@@ -65,7 +71,7 @@ char* create_string_of_numbers_in_range(int begin, size_t size)
 	size_t buflen=size*10;
 	char* buf=(char*)xmalloc(buflen);
 	buf[0]=0;
-	for (int i=0; i<size; i++)
+	for (size_t i=0; i<size; i++)
 	{
 		char buf2[16];
 		snprintf (buf2, sizeof(buf2), "%d ", begin+i);
@@ -138,4 +144,19 @@ int popcount64c(uint64_t x)
     x = (x + (x >> 4)) & m4;        //put count of each 8 bits into those 8 bits 
     return (x * h01) >> 56;  //returns left 8 bits of x + (x<<8) + (x<<16) + (x<<24) + ... 
 }
+
+std::string remove_trailing_space (std::string s)
+{
+	if (s.back()==' ')
+		return remove_trailing_space(s.substr(0, s.length()-1));
+	return s;
+};
+
+std::string cxx_list_of_ints_to_string (std::list<int> l)
+{
+	// https://stackoverflow.com/questions/2518979/how-to-transform-a-vectorint-into-a-string
+	std::stringstream result;
+	std::copy(l.begin(), l.end(), std::ostream_iterator<int>(result, " "));
+	return remove_trailing_space(result.str());
+};
 

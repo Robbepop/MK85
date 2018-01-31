@@ -1382,13 +1382,6 @@ void create_min_max (struct expr* e, bool min_max)
 
 bool sat=false;
 
-std::string remove_trailing_space (std::string s)
-{
-	if (s.back()==' ')
-		return remove_trailing_space(s.substr(0, s.length()-1));
-	return s;
-};
-
 void write_CNF(const char *fname)
 {
 	int hard_clause_weight;
@@ -1409,17 +1402,12 @@ void write_CNF(const char *fname)
 		{
 			assert(maxsat);
 			//fprintf (f, "%d %s\n", hard_clause_weight, c.s.c_str());
-			std::stringstream result;
-			std::copy(c.li.begin(), c.li.end(), std::ostream_iterator<int>(result, " "));
-			std::string s=remove_trailing_space(result.str());
+			std::string s=cxx_list_of_ints_to_string(c.li);
 			fprintf (f, "%d %s 0\n", c.weight, s.c_str());
 		}
 		else if (c.type==HARD_CLASUE)
 		{
-			// https://stackoverflow.com/questions/2518979/how-to-transform-a-vectorint-into-a-string
-			std::stringstream result;
-			std::copy(c.li.begin(), c.li.end(), std::ostream_iterator<int>(result, " "));
-			std::string s=remove_trailing_space(result.str());
+			std::string s=cxx_list_of_ints_to_string(c.li);
 			if (maxsat)
 				fprintf (f, "%d %s 0\n", hard_clause_weight, s.c_str());
 			else
