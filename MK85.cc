@@ -400,6 +400,7 @@ enum clause_type
 	COMMENT
 };
 
+// no ctor, use this class as C union
 class clause
 {
 public:
@@ -411,32 +412,6 @@ public:
 
 int clauses_t=0;
 std::list<class clause> clauses;
-
-/*
-void add_clause(const char* fmt, ...)
-{
-	va_list va;
-
-	va_start (va, fmt);
-	size_t buflen=vsnprintf (NULL, 0, fmt, va)+2+1;
-	va_end(va);
-
-	char* buf=(char*)xmalloc(buflen);
-
-	va_start (va, fmt);
-	size_t written=vsnprintf (buf, buflen, fmt, va);
-	va_end(va);
-
-	assert (written<buflen);
-	strcpy (buf+strlen(buf), " 0");
-
-	class clause c;
-	c.type=0;
-	c.s=buf;
-	clauses.push_back(c);
-	clauses_t++;
-};
-*/
 
 int max_weight=0;
 bool maxsat=false;
@@ -1397,11 +1372,9 @@ void write_CNF(const char *fname)
 		fprintf (f, "p cnf %d %d\n", SAT_next_var_no-1, clauses_t);
 	for (auto c : clauses)
 	{
-		//c.type;
 		if (c.type==SOFT_CLAUSE)
 		{
 			assert(maxsat);
-			//fprintf (f, "%d %s\n", hard_clause_weight, c.s.c_str());
 			std::string s=cxx_list_of_ints_to_string(c.li);
 			fprintf (f, "%d %s 0\n", c.weight, s.c_str());
 		}

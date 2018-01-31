@@ -7,12 +7,7 @@
 (assert (not(= a #x0001)))
 (assert (not(= b #x0001)))
 
-(assert (= 
-		(bvmul 
-			((_ zero_extend 16) a) 
-			((_ zero_extend 16) b)
-		)
-		((_ zero_extend 16) #x1234)))
+(assert (= (bvmul_no_overflow a b) #x1234))
 
 ;(check-sat)
 ;(get-model)

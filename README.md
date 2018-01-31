@@ -73,5 +73,7 @@ Maybe SAT-solver (minisat in this case) could optimize this out, or maybe not.
 
 ## Further reading
 
-I've found this paper helpful: [Martin Finke - Equisatisfiable SAT Encodings of Arithmetical Operations](http://www.martin-finke.de/documents/Masterarbeit_bitblast_Finke.pdf).
+I've found these papers helpful: 
+* [Armin Biere - Using High Performance SAT and QBF Solvers](http://fmv.jku.at/biere/talks/Biere-TPTPA11.pdf)
+* [Martin Finke - Equisatisfiable SAT Encodings of Arithmetical Operations](http://www.martin-finke.de/documents/Masterarbeit_bitblast_Finke.pdf)
 
