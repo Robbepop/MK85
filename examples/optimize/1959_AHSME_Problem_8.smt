@@ -11,12 +11,12 @@
 (declare-fun result () (_ BitVec 16))
 
 (assert (= 
-	((_ zero_extend 16) result) 
+	result
 	(bvadd 
 		(bvsub 
-			(bvmul ((_ zero_extend 16) x) ((_ zero_extend 16) x)) 
-			(bvmul ((_ zero_extend 16) x) #x00000006))
-		#x0000000d))
+			(bvmul_no_overflow x x) 
+			(bvmul_no_overflow x #x0006))
+		#x000d))
 )
 (minimize result)
 
