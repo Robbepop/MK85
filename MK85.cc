@@ -1381,6 +1381,27 @@ void create_assert (struct expr* e)
 	print_expr(e);
 	printf ("\n");
 */
+
+	// small optimization, however, can't get serious boost...
+	// if expression has form (assert (= x y)), use add_Tseitin_EQ_bitvecs here
+	if (e->type==EXPR_BINARY && e->op==OP_EQ)
+	{
+		struct SMT_var *op1=generate(e->op1);
+		struct SMT_var *op2=generate(e->op2);
+/*
+		printf ("optimized\n");
+		printf ("op1. id==%s, e=", op1->id); print_expr(op1->e); printf ("\n");
+		printf ("op2. id==%s, e=", op2->id); print_expr(op2->e); printf ("\n");
+*/
+		// FIXME: better func name (assure_):
+		assert_eq_widths(__FUNCTION__, op1, op2);
+
+		add_Tseitin_EQ_bitvecs(op1->width, op1->SAT_var, op2->SAT_var);
+		return;
+	}
+
+	// otherwise, EQ will be generated and "grounded" to True,
+	// which can be inefficient, because EQ is NOT-OR-XOR
 	struct SMT_var* v=generate(e);
 	add_comment ("%s() id=%s var=%d", __FUNCTION__, v->id, v->SAT_var);
 	add_clause1 (v->SAT_var); // v must be True
