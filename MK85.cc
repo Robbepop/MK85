@@ -37,6 +37,7 @@ struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt);
 struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add);
 void add_Tseitin_AND(int a, int b, int out);
 void add_Tseitin_EQ(int v1, int v2);
+void add_Tseitin_OR (int a, int b, int out);
 void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
 const char* op_name(enum OP op);
@@ -206,6 +207,7 @@ const char* op_name(enum OP op)
 
 		case OP_BVNOT:	return "bvnot";
 		case OP_BVNEG:	return "bvneg";
+		case OP_BVOR:	return "bvor";
 		case OP_BVXOR:	return "bvxor";
 		case OP_BVADD:	return "bvadd";
 		case OP_BVAND:	return "bvand";
@@ -866,6 +868,20 @@ struct SMT_var* generate_BVAND(struct SMT_var* v1, struct SMT_var* v2)
 	return rt;
 };
 
+struct SMT_var* generate_BVOR(struct SMT_var* v1, struct SMT_var* v2)
+{
+	assert(v1->type==TY_BITVEC);
+	assert(v2->type==TY_BITVEC);
+	assert(v1->width==v2->width);
+	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
+	add_comment ("generate_BVOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
+		v1->SAT_var, v1->SAT_var+v1->width-1,
+		v2->SAT_var, v2->SAT_var+v2->width-1);
+	for (int i=0; i<v1->width; i++)
+		add_Tseitin_OR (v1->SAT_var+i, v2->SAT_var+i, rt->SAT_var+i);
+	return rt;
+};
+
 struct SMT_var* generate_BVXOR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assert(v1->type==TY_BITVEC);
@@ -1172,14 +1188,21 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 	return generate_extract(product, 0, w);
 };
 
+void add_Tseitin_OR (int a, int b, int out)
+{
+	add_clause3 (a, b, -out);
+	add_clause2 (-a, out);
+	add_clause2 (-b, out);
+};
+
 struct SMT_var* generate_OR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("generate_OR id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d",
 		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
-	add_clause3 (v1->SAT_var, v2->SAT_var, -rt->SAT_var);
-	add_clause2 (-v1->SAT_var, rt->SAT_var);
-	add_clause2 (-v2->SAT_var, rt->SAT_var);
+
+	add_Tseitin_OR (v1->SAT_var, v2->SAT_var, rt->SAT_var);
+
 	return rt;
 };
 
@@ -1282,6 +1305,7 @@ struct SMT_var* generate(struct expr* e)
 			case OP_OR:		rt=generate_OR (v1, v2); break;
 			case OP_XOR:		rt=generate_XOR (v1, v2); break;
 			case OP_AND:		rt=generate_AND (v1, v2); break;
+			case OP_BVOR:		rt=generate_BVOR (v1, v2); break;
 			case OP_BVXOR:		rt=generate_BVXOR (v1, v2); break;
 			case OP_BVAND:		rt=generate_BVAND (v1, v2); break;
 			case OP_BVADD:		rt=generate_BVADD (v1, v2); break;
