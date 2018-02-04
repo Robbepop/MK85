@@ -46,7 +46,9 @@ const char* op_name(enum OP op);
 struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2);
 void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width);
-void sort_mismatch_error (const char* func_name, struct SMT_var* v1, struct SMT_var* v2);
+void assure_TY_BOOL(const char* func, struct SMT_var* v);
+void assure_TY_BITVEC(const char* func, struct SMT_var* v);
+void assert_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2);
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
@@ -543,8 +545,7 @@ void add_Tseitin_NOT(int v1, int v2)
 
 struct SMT_var* generate_NOT(struct SMT_var* v)
 {
-	if (v->type!=TY_BOOL)
-		die ("Error: sort mismatch: 'not' takes bool expression, which is not in %s\n", v->id);
+	assure_TY_BOOL("not", v);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("generate_NOT id (SMT) %s, (SAT) var=%d, out (SMT) id=%s out (SAT) var=%d", v->id, v->SAT_var, rt->id, rt->SAT_var);
@@ -554,8 +555,7 @@ struct SMT_var* generate_NOT(struct SMT_var* v)
 
 struct SMT_var* generate_BVNOT(struct SMT_var* v)
 {
-	if (v->type!=TY_BITVEC)
-		die ("Error: sort mismatch: 'bvnot' takes bitvec expression, which is not in %s\n", v->id);
+	assure_TY_BITVEC("bvnot", v);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v->width);
 	add_comment ("generate_BVNOT");
@@ -564,10 +564,25 @@ struct SMT_var* generate_BVNOT(struct SMT_var* v)
 	return rt;
 };
 
+// ... or die
+void assure_TY_BITVEC(const char* func, struct SMT_var* v)
+{
+	if (v->type==TY_BITVEC)
+		return;
+	die ("Error: sort mismatch: '%s' takes bitvec expression, but %s is not\n", func, v->id);
+}
+
+// ... or die
+void assure_TY_BOOL(const char* func, struct SMT_var* v)
+{
+	if (v->type==TY_BOOL)
+		return;
+	die ("Error: sort mismatch: '%s' takes boolean expression, but %s is not\n", func, v->id);
+}
+
 struct SMT_var* generate_BVNEG(struct SMT_var* v)
 {
-	if (v->type!=TY_BITVEC)
-		die ("Error: sort mismatch: 'bvneg' takes bitvec expression, which is not in %s\n", v->id);
+	assure_TY_BITVEC("bvneg", v);
 
 	add_comment ("generate_BVNEG");
 	return generate_BVADD(generate_BVNOT(v), generate_const(1, v->width));
@@ -630,12 +645,10 @@ void add_FA(int a, int b, int cin, int s, int cout)
 void generate_adder(struct SMT_var* a, struct SMT_var* b, struct SMT_var *carry_in, // inputs
 	struct SMT_var** sum, struct SMT_var** carry_out) // outputs
 {
-	assert(a->type==TY_BITVEC);
-	assert(b->type==TY_BITVEC);
-	if(a->width!=b->width)
-		sort_mismatch_error("adder", a, b);
-
-	assert(carry_in->type==TY_BOOL);
+	assure_TY_BITVEC("adder", a);
+	assure_TY_BITVEC("adder", b);
+	assert_eq_widths("adder", a, b);
+	assure_TY_BOOL("adder", carry_in);
 
 	*sum=create_internal_variable("adder_sum", TY_BITVEC, a->width);
 	add_comment ("%s", __FUNCTION__);
@@ -658,10 +671,9 @@ void generate_adder(struct SMT_var* a, struct SMT_var* b, struct SMT_var *carry_
 
 struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("=", v1, v2);
+	assure_TY_BITVEC("bvadd", v1);
+	assure_TY_BITVEC("bvadd", v2);
+	assert_eq_widths("bvadd", v1, v2);
 
 	struct SMT_var *sum;
 	struct SMT_var *carry_out;
@@ -693,10 +705,9 @@ void add_FS(int x, int y, int bin, int d, int bout)
 void generate_subtractor(struct SMT_var* v1, struct SMT_var* v2, 
 	struct SMT_var** rt, struct SMT_var** borrow_out)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("subtractor", v1, v2);
+	assure_TY_BITVEC("subtractor", v1);
+	assure_TY_BITVEC("subtractor", v2);
+	assert_eq_widths("subtractor", v1, v2);
 
 	*rt=create_internal_variable("SUB_result", TY_BITVEC, v1->width);
 
@@ -716,10 +727,9 @@ void generate_subtractor(struct SMT_var* v1, struct SMT_var* v2,
 
 struct SMT_var* generate_BVSUB(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvsub", v1, v2);
+	assure_TY_BITVEC("bvsub", v1);
+	assure_TY_BITVEC("bvsub", v2);
+	assert_eq_widths("bvsub", v1, v2);
 
 	struct SMT_var* rt=NULL;
 	struct SMT_var* borrow_out=NULL;
@@ -731,10 +741,9 @@ struct SMT_var* generate_BVSUB(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVSUB_borrow(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error(__FUNCTION__, v1, v2);
+	assure_TY_BITVEC(__FUNCTION__, v1);
+	assure_TY_BITVEC(__FUNCTION__, v2);
+	assert_eq_widths(__FUNCTION__, v1, v2);
 
 	struct SMT_var* rt=NULL;
 	struct SMT_var* borrow_out=NULL;
@@ -746,10 +755,9 @@ struct SMT_var* generate_BVSUB_borrow(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVULT(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvult", v1, v2);
+	assure_TY_BITVEC("bvult", v1);
+	assure_TY_BITVEC("bvult", v2);
+	assert_eq_widths("bvult", v1, v2);
 	add_comment (__FUNCTION__);
 
 	return generate_BVSUB_borrow(v1, v2);
@@ -757,10 +765,9 @@ struct SMT_var* generate_BVULT(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVULE(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvule", v1, v2);
+	assure_TY_BITVEC("bvule", v1);
+	assure_TY_BITVEC("bvule", v2);
+	assert_eq_widths("bvule", v1, v2);
 	add_comment (__FUNCTION__);
 
 	return generate_OR(generate_BVULT(v1, v2), generate_EQ(v1, v2));
@@ -768,10 +775,9 @@ struct SMT_var* generate_BVULE(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVUGT(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvugt", v1, v2);
+	assure_TY_BITVEC("bvugt", v1);
+	assure_TY_BITVEC("bvugt", v2);
+	assert_eq_widths("bvugt", v1, v2);
 	add_comment (__FUNCTION__);
 
 	return generate_BVSUB_borrow(v2, v1);
@@ -779,10 +785,9 @@ struct SMT_var* generate_BVUGT(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVUGE(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvuge", v1, v2);
+	assure_TY_BITVEC("bvuge", v1);
+	assure_TY_BITVEC("bvuge", v2);
+	assert_eq_widths("bvuge", v1, v2);
 	add_comment (__FUNCTION__);
 
 	return generate_OR(generate_BVUGT(v1, v2), generate_EQ(v1, v2));
@@ -793,10 +798,9 @@ struct SMT_var* generate_BVUGE(struct SMT_var* v1, struct SMT_var* v2)
 void generate_BVSUBGE(struct SMT_var* enable, struct SMT_var* v1, struct SMT_var* v2,
 	struct SMT_var** output, struct SMT_var** cond)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvsubge", v1, v2);
+	assure_TY_BITVEC("bvsubge", v1);
+	assure_TY_BITVEC("bvsubge", v2);
+	assert_eq_widths("bvsubge", v1, v2);
 
 	*cond=generate_BVUGE(v1, v2);
 	struct SMT_var *diff=generate_BVSUB(v1, v2);
@@ -815,10 +819,10 @@ void add_Tseitin_BV_is_zero (int SAT_var, int width, int SAT_var_out)
 
 void generate_divisor (struct SMT_var* divident, struct SMT_var* divisor, struct SMT_var** q, struct SMT_var** r)
 {
-	assert (divident->type==TY_BITVEC);
-	assert (divisor->type==TY_BITVEC);
-	if(divident->width!=divisor->width)
-		sort_mismatch_error("divisor", divident, divisor);
+	assure_TY_BITVEC("divident", divident);
+	assure_TY_BITVEC("divisor", divisor);
+	assert_eq_widths("divisor", divident, divisor);
+
 	int w=divident->width;
 	struct SMT_var* wide1=generate_zero_extend(divisor, w);
 	struct SMT_var* wide2=generate_shift_left(wide1, w-1);
@@ -863,8 +867,8 @@ struct SMT_var* generate_BVUREM(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_XOR(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BOOL);
-	assert(v2->type==TY_BOOL);
+	assure_TY_BOOL("xor", v1);
+	assure_TY_BOOL("xor", v2);
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("generate_XOR id1 (SMT) %s id2 (SMT) %s var1 (SAT) %d var2 (SAT) %d out (SMT) id %s out (SAT) var=%d",
 		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
@@ -874,10 +878,10 @@ struct SMT_var* generate_XOR(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVAND(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvand", v1, v2);
+	assure_TY_BITVEC("bvand", v1);
+	assure_TY_BITVEC("bvand", v2);
+	assert_eq_widths("bvand", v1, v2);
+
 	struct SMT_var* rt=create_internal_variable("AND_result", TY_BITVEC, v1->width);
 	add_comment (__FUNCTION__);
 	for (int i=0; i<v1->width; i++)
@@ -885,12 +889,26 @@ struct SMT_var* generate_BVAND(struct SMT_var* v1, struct SMT_var* v2)
 	return rt;
 };
 
+// ... or die
+void assert_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2)
+{
+	if(v1->width==v2->width)
+		return;
+
+	printf ("line %d. %s can't work on bitvectors of different widths. you supplied %d and %d\n",
+		yylineno, name, v1->width, v2->width);
+	printf ("v1. id==%s, e=", v1->id); print_expr(v1->e); printf ("\n");
+	printf ("v2. id==%s, e=", v2->id); print_expr(v2->e); printf ("\n");
+	exit(0);
+
+};
+
 struct SMT_var* generate_BVOR(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvor", v1, v2);
+	assure_TY_BITVEC("bvor", v1);
+	assure_TY_BITVEC("bvor", v2);
+	assert_eq_widths("bvor", v1, v2);
+
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
 	add_comment ("generate_BVOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
 		v1->SAT_var, v1->SAT_var+v1->width-1,
@@ -902,10 +920,10 @@ struct SMT_var* generate_BVOR(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_BVXOR(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assert(v1->type==TY_BITVEC);
-	assert(v2->type==TY_BITVEC);
-	if(v1->width!=v2->width)
-		sort_mismatch_error("bvxor", v1, v2);
+	assure_TY_BITVEC("bvxor", v1);
+	assure_TY_BITVEC("bvxor", v2);
+	assert_eq_widths("bvxor", v1, v2);
+
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
 	add_comment ("generate_BVXOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
 		v1->SAT_var, v1->SAT_var+v1->width-1,
@@ -942,16 +960,6 @@ struct SMT_var* generate_OR_list(int var, int width)
 	return rt;
 };
 
-void sort_mismatch_error (const char* func_name, struct SMT_var* v1, struct SMT_var* v2)
-{
-	// TODO checking must be here!
-	printf ("line %d. %s can't work on bitvectors of different widths. you supplied %d and %d\n",
-		yylineno, func_name, v1->width, v2->width);
-	printf ("v1. id==%s, e=", v1->id); print_expr(v1->e); printf ("\n");
-	printf ("v2. id==%s, e=", v2->id); print_expr(v2->e); printf ("\n");
-	exit(0);
-}
-
 struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
 {
 	//printf ("%s() v1=%d v2=%d\n", __FUNCTION__, v1->var_no, v2->var_no);
@@ -973,9 +981,8 @@ struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
 	}
 	else
 	{
-		assert (v2->type==TY_BITVEC);
-		if(v1->width!=v2->width)
-			sort_mismatch_error("=", v1, v2);
+		assure_TY_BITVEC("=", v2);
+		assert_eq_widths("=", v1, v2);
 
 		add_comment ("generate_EQ for two bitvectors, v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]", 
 			v1->SAT_var, v1->SAT_var+v1->width-1,
@@ -1179,10 +1186,10 @@ struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned wid
 // 1 - no overflow
 struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 {
-	assert (X->type==TY_BITVEC);
-	assert (Y->type==TY_BITVEC);
-	if(X->width!=Y->width)
-		sort_mismatch_error("bvmul", X, Y);
+	assure_TY_BITVEC("bvmul", X);
+	assure_TY_BITVEC("bvmul", Y);
+	assert_eq_widths("bvmul", X, Y);
+
 	int w=X->width;
 	int final_w=w*2;
 
@@ -1250,11 +1257,10 @@ void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width)
 
 struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f)
 {
-	assert (sel->type==TY_BOOL);
-	assert (t->type==TY_BITVEC);
-	assert (f->type==TY_BITVEC);
-	if(t->width!=f->width)
-		sort_mismatch_error("ite", t, f);
+	assure_TY_BOOL("ite", sel);
+	assure_TY_BITVEC("ite", t);
+	assure_TY_BITVEC("ite", f);
+	assert_eq_widths("ite", t, f);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, t->width);
 
@@ -1396,11 +1402,12 @@ void create_min_max (struct expr* e, bool min_max)
 
 	struct SMT_var* v=generate(e);
 
+	assure_TY_BITVEC(__FUNCTION__, v);
+
 	// if "minimize", negate input value:
 	if (min_max==false)
 		v=generate_BVNEG(v);
 
-	assert (v->type==TY_BITVEC);
 	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
 
 	// maximize always. if we need to minimize, $v$ is already negated at this point:
