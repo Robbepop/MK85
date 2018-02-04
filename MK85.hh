@@ -91,4 +91,5 @@ void get_all_models(bool dump_variables);
 
 // global switches
 extern bool dump_internal_variables;
+extern bool write_CNF_file;
 

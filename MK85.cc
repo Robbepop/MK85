@@ -25,7 +25,9 @@ struct SMT_var* var_always_false=NULL;
 struct SMT_var* var_always_true=NULL;
 
 // global switches
-bool dump_internal_variables;
+// TODO: document them
+bool dump_internal_variables=false;
+bool write_CNF_file=false;
 
 // fwd decl:
 struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2);
@@ -942,6 +944,7 @@ struct SMT_var* generate_OR_list(int var, int width)
 
 void sort_mismatch_error (const char* func_name, struct SMT_var* v1, struct SMT_var* v2)
 {
+	// TODO checking must be here!
 	printf ("line %d. %s can't work on bitvectors of different widths. you supplied %d and %d\n",
 		yylineno, func_name, v1->width, v2->width);
 	printf ("v1. id==%s, e=", v1->id); print_expr(v1->e); printf ("\n");
@@ -1544,6 +1547,9 @@ bool run_picosat_and_get_solution()
 	struct PicoSAT *p=picosat_init ();
 
 	add_clauses_to_picosat(p);
+
+	if (write_CNF_file)
+		write_CNF("tmp.cnf");
 
 	int res=picosat_sat (p,-1);
 	if (res==20)

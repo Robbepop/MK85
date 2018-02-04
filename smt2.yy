@@ -190,8 +190,11 @@ int main(int argc, char *argv[])
 	for (i=1; i<argc && argv[i][0]=='-'; i++)
 	{
 		// handle switches
+		// TODO stricmp
 		if (strcmp(argv[i], "--dump-internal-variables")==0)
 			dump_internal_variables=true;
+		if (strcmp(argv[i], "--write-CNF")==0)
+			write_CNF_file=true;
 	};
 
 	if (i>=argc)
