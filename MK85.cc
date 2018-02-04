@@ -44,7 +44,6 @@ void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
 const char* op_name(enum OP op);
 struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2);
-void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width);
 void assure_TY_BOOL(const char* func, struct SMT_var* v);
 void assure_TY_BITVEC(const char* func, struct SMT_var* v);
@@ -938,8 +937,6 @@ struct SMT_var* generate_BVXOR(struct SMT_var* v1, struct SMT_var* v2)
 void add_Tseitin_OR_list(int var, int width, int var_out)
 {
 	add_comment ("%s(var=%d, width=%d, var_out=%d)", __FUNCTION__, var, width, var_out);
-	//char* tmp=create_string_of_numbers_in_range(var, width);
-	//add_clause("%s -%d", tmp, var_out);
 	class clause c;
 	c.type=HARD_CLASUE;
 	for (int i=var; i<var+width; i++)
@@ -1174,9 +1171,7 @@ struct SMT_var* generate_BVLSHR (struct SMT_var* X, struct SMT_var* cnt)
 struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width)
 {
 	struct SMT_var* rt=create_internal_variable("extracted", TY_BITVEC, width);
-	// FIXME: use _BV function
-	for (size_t i=0; i<width; i++)
-		add_Tseitin_EQ(rt->SAT_var+i, v->SAT_var+begin+i);
+	add_Tseitin_EQ_bitvecs(width, rt->SAT_var, v->SAT_var+begin);
 
 	return rt;
 };
@@ -1211,10 +1206,8 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 		product=generate_BVADD(product, partial_products2[i]);
 
 	// fix high part at 0?
-	// TODO use _BV function:
 	if (type==1)
-		for (int i=w; i<w*2; i++)
-			add_Tseitin_EQ(product->SAT_var+i, var_always_false->SAT_var);
+		fix_BV_to_zero(product->SAT_var+w, w);
 
 	// leave only low part of product, same width as each input:
 	return generate_extract(product, 0, w);
