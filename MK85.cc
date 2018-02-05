@@ -35,8 +35,9 @@ struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_
 struct SMT_var* generate_OR(struct SMT_var* v1, struct SMT_var* v2);
 struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width);
 struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt);
-struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt);
+struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt, int SAT_var_new);
 struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add);
+struct SMT_var* generate_repeat(struct SMT_var *in, int times);
 void add_Tseitin_AND(int a, int b, int out);
 void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_OR (int a, int b, int out);
@@ -182,6 +183,15 @@ struct expr* create_zero_extend_expr(int bits, struct expr* e)
 	return rt;
 };
 
+struct expr* create_repeat_expr(int times, struct expr* e)
+{
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
+	rt->type=EXPR_REPEAT;
+	rt->const_val=times;
+	rt->op1=e;
+	return rt;
+};
+
 // get [start, end) bits
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e)
 {
@@ -222,6 +232,7 @@ const char* op_name(enum OP op)
 		case OP_BVULT:	return "bvult";
 		case OP_BVSHL:	return "bvshl";
 		case OP_BVLSHR:	return "bvlshr";
+		case OP_BVASHR:	return "bvashr";
 		case OP_BVMUL:	return "bvmul";
 		case OP_BVMUL_NO_OVERFLOW:	return "bvmul_no_overflow";
 		case OP_ITE:	return "ite";
@@ -245,6 +256,13 @@ void print_expr(struct expr* e)
 	if (e->type==EXPR_ZERO_EXTEND)
 	{
 		printf ("(ZEXT by %d bits: ", e->const_val);
+		print_expr(e->op1);
+		printf (")");
+		return;
+	};
+	if (e->type==EXPR_REPEAT)
+	{
+		printf ("(repeat %d times: ", e->const_val);
 		print_expr(e->op1);
 		printf (")");
 		return;
@@ -839,7 +857,7 @@ void generate_divisor (struct SMT_var* divident, struct SMT_var* divisor, struct
 		add_Tseitin_EQ(cond->SAT_var, (*q)->SAT_var+w-1-i);
 		if (i+1==w)
 			break;
-		wide2=generate_shift_right(wide2, 1);
+		wide2=generate_shift_right(wide2, 1, var_always_false->SAT_var);
 	};
 	*r=divident;
 };
@@ -1043,6 +1061,12 @@ void add_Tseitin_EQ_bitvecs(int width, int v1, int v2)
 		add_Tseitin_EQ(v1+i, v2+i);
 }
 
+void add_Tseitin_bitvec_eq_to_bool(int width, int bv, int b)
+{
+	for (int i=0; i<width; i++)
+		add_Tseitin_EQ(bv+i, b);
+}
+
 void fix_BV_to_zero (int v, int width)
 {
 	for (int i=0; i<width; i++)
@@ -1060,6 +1084,22 @@ struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add)
 	return rt;
 };
 
+struct SMT_var* generate_repeat_from_SAT_var(int SAT_var, int width, int times)
+{
+	int final_width=width*times;
+	struct SMT_var* rt=create_internal_variable("repeat", TY_BITVEC, final_width);
+
+	for (int i=0; i<times; i++)
+		add_Tseitin_EQ_bitvecs(width, SAT_var, rt->SAT_var + width*i);
+
+	return rt;
+};
+
+struct SMT_var* generate_repeat(struct SMT_var *in, int times)
+{
+	return generate_repeat_from_SAT_var(in->SAT_var, in->width, times);
+};
+
 // "cnt" is not a SMT variable!
 struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt)
 {
@@ -1075,20 +1115,29 @@ struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt)
 };
 
 // cnt is not a SMT variable!
-struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt)
+// SAT_var_new can be TRUE in case of bvashr, or it can just be connected to always_false
+struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt, int SAT_var_new)
 {
 	int w=X->width;
 
 	struct SMT_var* rt=create_internal_variable("shifted_right", TY_BITVEC, w);
 
-	fix_BV_to_zero(rt->SAT_var+w-cnt, cnt);
+	add_Tseitin_bitvec_eq_to_bool(cnt, rt->SAT_var+w-cnt, SAT_var_new);
+	//fix_BV_to_zero(rt->SAT_var+w-cnt, cnt);
 
 	add_Tseitin_EQ_bitvecs(w-cnt, rt->SAT_var, X->SAT_var+cnt);
 	return rt;
 };
 
+// returns SAT_var
+int MSB_of_SMT_var (struct SMT_var *v)
+{
+	return v->SAT_var + v->width-1;
+};
+
 // direction=false for shift left
 // direction=true for shift right
+// arith=true is for bvashr (only for shifting right)
 
 // for 8-bit left shifter, this is:
 // X=ITE(cnt&1, X<<1, X)
@@ -1096,7 +1145,7 @@ struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt)
 // X=ITE((cnt>>2)&1, X<<4, X)
 // i.e., if the bit is set in cnt, shift X by that ammount of bits, or do nothing otherwise
 
-struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, bool direction)
+struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, bool direction, bool arith)
 {
 	int w=X->width;
 
@@ -1105,6 +1154,7 @@ struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, b
 	struct SMT_var* tmp;
 
 	// bit vector must have width=2^x, i.e., 8, 16, 32, 64, etc
+	// FIXME better func name:
 	assert (popcount64c (w)==1);
 
 	int bits_in_selector=mylog2(w);
@@ -1114,7 +1164,7 @@ struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, b
 		if (direction==false)
 			tmp=generate_shift_left(in, 1<<i);
 		else
-			tmp=generate_shift_right(in, 1<<i);
+			tmp=generate_shift_right(in, 1<<i, arith ? MSB_of_SMT_var(X) : var_always_false->SAT_var);
 
 		out=create_internal_variable("tmp", TY_BITVEC, w);
 
@@ -1128,10 +1178,17 @@ struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, b
 	struct SMT_var *disable_shifter=create_internal_variable("...", TY_BOOL, 1);
 	add_Tseitin_OR_list(cnt->SAT_var+bits_in_selector, w-bits_in_selector, disable_shifter->SAT_var);
 
-	return generate_ITE(disable_shifter, generate_const(0, w), in);
+	// 0x80 >>s cnt, where cnt>8, must be 0xff! so fill result with MSB(input)
+	struct SMT_var *default_val;
+	if (arith==false)
+		default_val=generate_const(0, w);
+	else
+		default_val=generate_repeat_from_SAT_var(MSB_of_SMT_var(X), 1, w);
+
+	return generate_ITE(disable_shifter, default_val, in);
 };
 
-struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction)
+struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction, bool arith)
 {
 	int w=X->width;
 
@@ -1147,7 +1204,7 @@ struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool d
 		cnt=generate_zero_extend(cnt, new_w-w);
 	}
 
-	struct SMT_var* rt=generate_shifter_real(X, cnt, direction);
+	struct SMT_var* rt=generate_shifter_real(X, cnt, direction, arith);
 
 	if (popcount64c (w)!=1)
 	{
@@ -1160,12 +1217,17 @@ struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool d
 
 struct SMT_var* generate_BVSHL (struct SMT_var* X, struct SMT_var* cnt)
 {
-	return generate_shifter (X, cnt, false);
+	return generate_shifter (X, cnt, false, false);
 };
 
 struct SMT_var* generate_BVLSHR (struct SMT_var* X, struct SMT_var* cnt)
 {
-	return generate_shifter (X, cnt, true);
+	return generate_shifter (X, cnt, true, false);
+};
+
+struct SMT_var* generate_BVASHR (struct SMT_var* X, struct SMT_var* cnt)
+{
+	return generate_shifter (X, cnt, true, true);
 };
 
 struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width)
@@ -1297,6 +1359,13 @@ struct SMT_var* generate(struct expr* e)
 		return rt;
 	};
 
+	if (e->type==EXPR_REPEAT)
+	{
+		struct SMT_var* rt=generate_repeat(generate(e->op1), e->const_val);
+		rt->e=e;
+		return rt;
+	};
+
 	if (e->type==EXPR_EXTRACT)
 	{
 		struct SMT_var* rt=generate_extract(generate(e->op1), e->const_val, e->const_width);
@@ -1313,7 +1382,7 @@ struct SMT_var* generate(struct expr* e)
 			case OP_BVNOT:		rt=generate_BVNOT (generate (e->op1)); break;
 			case OP_BVNEG:		rt=generate_BVNEG (generate (e->op1)); break;
 			case OP_BVSHL1:		rt=generate_shift_left (generate (e->op1), 1); break;
-			case OP_BVSHR1:		rt=generate_shift_right (generate (e->op1), 1); break;
+			case OP_BVSHR1:		rt=generate_shift_right (generate (e->op1), 1, var_always_false->SAT_var); break;
 			default:		assert(0);
 		};
 		rt->e=e;
@@ -1354,6 +1423,7 @@ struct SMT_var* generate(struct expr* e)
 			case OP_BVUREM:		rt=generate_BVUREM (v1, v2); break;
 			case OP_BVSHL:		rt=generate_BVSHL (generate (e->op1), generate (e->op2)); break;
 			case OP_BVLSHR:		rt=generate_BVLSHR (generate (e->op1), generate (e->op2)); break;
+			case OP_BVASHR:		rt=generate_BVASHR (generate (e->op1), generate (e->op2)); break;
 			default:		assert(0);
 		}
 		rt->e=e;

@@ -49,7 +49,13 @@ fi
 ./MK85 tests/bvlshr2_test.smt > tmp && diff tmp tests/bvlshr2_test.correct
 ./MK85 tests/bvlshr_10.smt > tmp && diff tmp tests/bvlshr_10.correct
 
+./MK85 tests/bvashr_test.smt > tmp && diff tmp tests/bvashr_test.correct
+
 ./MK85 examples/optimize/GCD_BV3.smt > tmp && diff tmp examples/optimize/GCD_BV3.correct
 ./MK85 examples/optimize/LCM_BV1.smt > tmp && diff tmp examples/optimize/LCM_BV1.correct
 ./MK85 examples/optimize/assign_problem.smt > tmp && diff tmp examples/optimize/assign_problem.correct
+
+./MK85 tests/repeat.smt > tmp && diff tmp tests/repeat.correct
+
+rm tmp
 

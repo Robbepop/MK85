@@ -2,6 +2,7 @@
 ; which are:
 ; r = y ^ ((x ^ y) & -(x < y)); // min(x, y)
 ; r = x ^ ((x ^ y) & -(x < y)); // max(x, y)
+; TODO what about signed?
 (set-logic QF_BV)
 (set-info :smt-lib-version 2.0)
 

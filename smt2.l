@@ -54,10 +54,12 @@ void yyerror(char *);
 "distinct"	{ return T_DISTINCT; }
 "QF_BV"		{ return T_QF_BV; }
 "zero_extend"	{ return T_ZERO_EXTEND; }
+"repeat"	{ return T_REPEAT; }
 "extract"	{ return T_EXTRACT; }
 "ite"		{ return T_ITE; }
 "bvshl"		{ return T_BVSHL; }
 "bvlshr"	{ return T_BVLSHR; }
+"bvashr"	{ return T_BVASHR; }
 "bvshl1"	{ return T_BVSHL1; }
 "bvshr1"	{ return T_BVSHR1; }
 "bvsubge"	{ return T_BVSUBGE; }

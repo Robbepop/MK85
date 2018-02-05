@@ -1,0 +1,5 @@
+sat
+(model
+	(define-fun x () (_ BitVec 8) (_ bv240 8)) ; 0xf0
+	(define-fun y () (_ BitVec 8) (_ bv255 8)) ; 0xff
+)

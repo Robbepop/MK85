@@ -10,6 +10,7 @@ enum OP
 	OP_NOT,
 	OP_BVSHL,
 	OP_BVLSHR,
+	OP_BVASHR,
 	OP_BVSHL1,
 	OP_BVSHR1,
 	OP_EQ,
@@ -44,6 +45,7 @@ enum EXPR_TYPE
 	EXPR_TERNARY,
 	EXPR_CONST,
 	EXPR_ZERO_EXTEND, // op1 and const_val are used!
+	EXPR_REPEAT, // op1 and const_val are used!
 	EXPR_EXTRACT // op1 and const_val and const_width are used!
 };
 
@@ -78,6 +80,7 @@ struct expr* create_vararg_expr(enum OP t, struct expr* args);
 struct expr* create_distinct_expr(struct expr* args);
 struct expr* create_const_expr(uint32_t c, int w);
 struct expr* create_zero_extend_expr(int bits, struct expr* e);
+struct expr* create_repeat_expr(int times, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
 struct expr* create_ITE(struct expr* sel, struct expr* t, struct expr* f);
 
