@@ -84,6 +84,6 @@ I've found these papers/articles/books helpful:
 * [Martin Finke - Equisatisfiable SAT Encodings of Arithmetical Operations](http://www.martin-finke.de/documents/Masterarbeit_bitblast_Finke.pdf)
 
 * Henry Warren - Hacker's Delight.
-Some people say you don't need these branchless tricks and hacks on modern hardware, so you don't need to read it.
-Nevertheless, these hacks and understanding them helps immensely.
+Some people say these branchless tricks and hacks were only relevant for old RISC CPUs, so you don't need to read it.
+Nevertheless, these hacks and understanding them helps immensely to get into boolean algebra and all the mathematics.
 
