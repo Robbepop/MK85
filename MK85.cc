@@ -30,6 +30,7 @@ bool dump_internal_variables=false;
 bool write_CNF_file=false;
 
 // fwd decl:
+struct SMT_var* generate_AND(struct SMT_var* v1, struct SMT_var* v2);
 struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2);
 struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f);
 struct SMT_var* generate_OR(struct SMT_var* v1, struct SMT_var* v2);
@@ -230,6 +231,10 @@ const char* op_name(enum OP op)
 		case OP_BVULE:	return "bvule";
 		case OP_BVUGT:	return "bvugt";
 		case OP_BVULT:	return "bvult";
+		case OP_BVSGE:	return "bvsge";
+		case OP_BVSLE:	return "bvsle";
+		case OP_BVSGT:	return "bvsgt";
+		case OP_BVSLT:	return "bvslt";
 		case OP_BVSHL:	return "bvshl";
 		case OP_BVLSHR:	return "bvlshr";
 		case OP_BVASHR:	return "bvashr";
@@ -243,6 +248,8 @@ const char* op_name(enum OP op)
 
 void print_expr(struct expr* e)
 {
+	assert(e);
+
 	if (e->type==EXPR_ID)
 	{
 		printf ("%s", e->id);
@@ -586,7 +593,9 @@ void assure_TY_BITVEC(const char* func, struct SMT_var* v)
 {
 	if (v->type==TY_BITVEC)
 		return;
-	die ("Error: sort mismatch: '%s' takes bitvec expression, but %s is not\n", func, v->id);
+	printf ("Error: sort mismatch: '%s' takes bitvec expression, but %s is not\n", func, v->id);
+	printf ("which is: "); print_expr (v->e); printf ("\n");
+	exit(0);
 }
 
 // ... or die
@@ -594,7 +603,9 @@ void assure_TY_BOOL(const char* func, struct SMT_var* v)
 {
 	if (v->type==TY_BOOL)
 		return;
-	die ("Error: sort mismatch: '%s' takes boolean expression, but %s is not\n", func, v->id);
+	printf ("Error: sort mismatch: '%s' takes boolean expression, but %s is not\n", func, v->id);
+	printf ("which is: "); print_expr (v->e); printf ("\n");
+	exit(0);
 }
 
 struct SMT_var* generate_BVNEG(struct SMT_var* v)
@@ -810,6 +821,71 @@ struct SMT_var* generate_BVUGE(struct SMT_var* v1, struct SMT_var* v2)
 	return generate_OR(generate_BVUGT(v1, v2), generate_EQ(v1, v2));
 };
 
+/*
+see also from http://smtlib.cs.uiowa.edu
+
+   (bvslt s t) abbreviates:
+      (or (and (= ((_ extract |m-1| |m-1|) s) #b1)
+               (= ((_ extract |m-1| |m-1|) t) #b0))
+          (and (= ((_ extract |m-1| |m-1|) s) ((_ extract |m-1| |m-1|) t))
+               (bvult s t)))
+*/
+struct SMT_var* generate_BVSLT(struct SMT_var* v1, struct SMT_var* v2)
+{
+	assure_TY_BITVEC("bvslt", v1);
+	assure_TY_BITVEC("bvslt", v2);
+	assure_eq_widths("bvslt", v1, v2);
+	add_comment (__FUNCTION__);
+
+	// get signs of operands:
+	struct SMT_var* v1_MSB=generate_extract(v1, v1->width-1, 1);
+	struct SMT_var* v2_MSB=generate_extract(v2, v2->width-1, 1);
+
+	struct SMT_var* MSBs_are_00=generate_AND(generate_EQ(v1_MSB, var_always_false), generate_EQ(v2_MSB, var_always_false));
+	struct SMT_var* MSBs_are_01=generate_AND(generate_EQ(v1_MSB, var_always_false), generate_EQ(v2_MSB, var_always_true));
+	struct SMT_var* MSBs_are_10=generate_AND(generate_EQ(v1_MSB, var_always_true), generate_EQ(v2_MSB, var_always_false));
+	struct SMT_var* MSBs_are_11=generate_AND(generate_EQ(v1_MSB, var_always_true), generate_EQ(v2_MSB, var_always_true));
+
+	struct SMT_var* unsigned_comparison=generate_BVULT(v1, v2);
+
+	return 
+		generate_ITE(MSBs_are_00, unsigned_comparison,
+		generate_ITE(MSBs_are_01, var_always_false,
+		generate_ITE(MSBs_are_10, var_always_true,
+		generate_ITE(MSBs_are_11, unsigned_comparison,
+			var_always_false)))); // default, but we can't get here
+};
+
+struct SMT_var* generate_BVSLE(struct SMT_var* v1, struct SMT_var* v2)
+{
+	assure_TY_BITVEC("bvsle", v1);
+	assure_TY_BITVEC("bvsle", v2);
+	assure_eq_widths("bvsle", v1, v2);
+	add_comment (__FUNCTION__);
+
+	return generate_OR(generate_BVSLT(v1, v2), generate_EQ(v1, v2));
+};
+
+struct SMT_var* generate_BVSGT(struct SMT_var* v1, struct SMT_var* v2)
+{
+	assure_TY_BITVEC("bvsgt", v1);
+	assure_TY_BITVEC("bvsgt", v2);
+	assure_eq_widths("bvsgt", v1, v2);
+	add_comment (__FUNCTION__);
+
+	return generate_BVSLT(v2, v1);
+};
+
+struct SMT_var* generate_BVSGE(struct SMT_var* v1, struct SMT_var* v2)
+{
+	assure_TY_BITVEC("bvsge", v1);
+	assure_TY_BITVEC("bvsge", v2);
+	assure_eq_widths("bvsge", v1, v2);
+	add_comment (__FUNCTION__);
+
+	return generate_OR(generate_BVSGT(v1, v2), generate_EQ(v1, v2));
+};
+
 // it's like SUBGE in ARM CPU in ARM mode
 // rationale: used in divisor!
 void generate_BVSUBGE(struct SMT_var* enable, struct SMT_var* v1, struct SMT_var* v2,
@@ -884,8 +960,9 @@ struct SMT_var* generate_BVUREM(struct SMT_var* v1, struct SMT_var* v2)
 
 struct SMT_var* generate_XOR(struct SMT_var* v1, struct SMT_var* v2)
 {
-	assure_TY_BOOL("xor", v1);
-	assure_TY_BOOL("xor", v2);
+	if (v1->width!=1 || v2->width!=1)
+		die ("line %d: sort mismatch, xor requires 1-bit bools or bitvecs, you supplied %d and %d\n", yylineno, v1->width, v2->width);
+
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("generate_XOR id1 (SMT) %s id2 (SMT) %s var1 (SAT) %d var2 (SAT) %d out (SMT) id %s out (SAT) var=%d",
 		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
@@ -978,9 +1055,9 @@ struct SMT_var* generate_OR_list(int var, int width)
 struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
 {
 	//printf ("%s() v1=%d v2=%d\n", __FUNCTION__, v1->var_no, v2->var_no);
-	if (v1->type==TY_BOOL)
+	if (v1->width==1)
 	{
-		if(v2->type!=TY_BOOL)
+		if(v2->width!=1)
 		{
 			printf ("%s() sort mismatch\n", __FUNCTION__);
 			printf ("v1=%s type=%d width=%d\n", v1->id, v1->type, v1->width);
@@ -1313,9 +1390,13 @@ void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width)
 
 struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f)
 {
-	assure_TY_BOOL("ite", sel);
+	//assure_TY_BOOL("ite", sel);
+	if (sel->width!=1)
+		die ("line %d: ITE's selector must have width of 1 bit (no matter, bool or bitvec), but %d bits supplied\n", yylineno, sel->width);
+/*
 	assure_TY_BITVEC("ite", t);
 	assure_TY_BITVEC("ite", f);
+*/
 	assure_eq_widths("ite", t, f);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, t->width);
@@ -1338,7 +1419,7 @@ struct SMT_var* generate(struct expr* e)
 	{
 		struct SMT_var* rt=find_variable(e->id);
 		if(rt==NULL)
-			die ("Variable %s hasn't been declared\n", e->id);
+			die ("line %d: variable %s hasn't been declared\n", yylineno, e->id);
 		//printf ("generate -> %d (by id %s)\n", rt->var_no, e->id);
 		rt->e=e;
 		return rt;
@@ -1411,6 +1492,10 @@ struct SMT_var* generate(struct expr* e)
 			case OP_BVULE:		rt=generate_BVULE (v1, v2); break;
 			case OP_BVUGT:		rt=generate_BVUGT (v1, v2); break;
 			case OP_BVULT:		rt=generate_BVULT (v1, v2); break;
+			case OP_BVSGE:		rt=generate_BVSGE (v1, v2); break;
+			case OP_BVSLE:		rt=generate_BVSLE (v1, v2); break;
+			case OP_BVSGT:		rt=generate_BVSGT (v1, v2); break;
+			case OP_BVSLT:		rt=generate_BVSLT (v1, v2); break;
 			case OP_BVSUBGE:
 						{
 							struct SMT_var *output;

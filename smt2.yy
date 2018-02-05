@@ -30,6 +30,7 @@ void yyerror(const char *);
 %token T_BVUGE T_BVULE T_BVUGT T_BVULT T_DISTINCT T_BVSHL T_BVLSHR T_BVASHR T_BVSHL1 T_BVSHR1 T_BVSUBGE
 %token T_WHITESPACE
 %token T_ZERO_EXTEND T_EXTRACT T_REPEAT T_ITE
+%token T_BVSLE T_BVSLT T_BVSGE T_BVSGT
 
 %type <text> T_ID
 %type <i> T_NUMBER
@@ -109,6 +110,10 @@ binary_func:
 	| T_BVSHL	{ $$=OP_BVSHL; }
 	| T_BVLSHR	{ $$=OP_BVLSHR; }
 	| T_BVASHR	{ $$=OP_BVASHR; }
+	| T_BVSLE	{ $$=OP_BVSLE; }
+	| T_BVSLT	{ $$=OP_BVSLT; }
+	| T_BVSGE	{ $$=OP_BVSGE; }
+	| T_BVSGT	{ $$=OP_BVSGT; }
 	;
 
 vararg_func:

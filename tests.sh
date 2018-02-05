@@ -57,5 +57,7 @@ fi
 
 ./MK85 tests/repeat.smt > tmp && diff tmp tests/repeat.correct
 
+./MK85 tests/bvslt_test.smt > tmp && diff tmp tests/bvslt_test.correct
+
 rm tmp
 

@@ -51,6 +51,10 @@ void yyerror(char *);
 "bvuge"		{ return T_BVUGE; }
 "bvule"		{ return T_BVULE; }
 "bvult"		{ return T_BVULT; }
+"bvsle"		{ return T_BVSLE; }
+"bvslt"		{ return T_BVSLT; }
+"bvsge"		{ return T_BVSGE; }
+"bvsgt"		{ return T_BVSGT; }
 "distinct"	{ return T_DISTINCT; }
 "QF_BV"		{ return T_QF_BV; }
 "zero_extend"	{ return T_ZERO_EXTEND; }
