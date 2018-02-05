@@ -18,7 +18,7 @@
 (declare-fun min2 () (_ BitVec 32))
 (declare-fun max2 () (_ BitVec 32))
 
-; functions we will "compare" against to:
+; functions we will "compare" against:
 
 ; y ^ ((x ^ y) & -(x < y)); // min(x, y)
 (assert (= min2
