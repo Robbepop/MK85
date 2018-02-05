@@ -1197,6 +1197,7 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 	{
 		partial_products1[i]=create_internal_variable("partial_product1", TY_BITVEC, final_w);
 		add_Tseitin_mult_by_bit(final_w, X_extended->SAT_var, partial_products1[i]->SAT_var, Y->SAT_var+i);
+		// TODO how to get rid of new variables creation?!
 		partial_products2[i]=generate_shift_left(partial_products1[i], i);
 	};
 
@@ -1209,7 +1210,7 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 	if (type==1)
 		fix_BV_to_zero(product->SAT_var+w, w);
 
-	// leave only low part of product, same width as each input:
+	// leave only low part of product, same width as in both inputs:
 	return generate_extract(product, 0, w);
 };
 
