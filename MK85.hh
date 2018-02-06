@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+// FIXME enum
 #define TY_BOOL 0
 #define TY_BITVEC 1
 
@@ -41,6 +42,7 @@ enum OP
 	OP_ITE
 };
 
+// FIXME make zero_extend, repeat, extract as functions!
 enum EXPR_TYPE
 {
 	EXPR_ID,

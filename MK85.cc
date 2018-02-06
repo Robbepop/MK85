@@ -30,22 +30,22 @@ bool dump_internal_variables=false;
 bool write_CNF_file=false;
 
 // fwd decl:
-struct SMT_var* generate_AND(struct SMT_var* v1, struct SMT_var* v2);
-struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2);
-struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f);
-struct SMT_var* generate_OR(struct SMT_var* v1, struct SMT_var* v2);
-struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width);
-struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt);
-struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt, int SAT_var_new);
-struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add);
-struct SMT_var* generate_repeat(struct SMT_var *in, int times);
+struct SMT_var* gen_AND(struct SMT_var* v1, struct SMT_var* v2);
+struct SMT_var* gen_EQ(struct SMT_var* v1, struct SMT_var* v2);
+struct SMT_var* gen_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f);
+struct SMT_var* gen_OR(struct SMT_var* v1, struct SMT_var* v2);
+struct SMT_var* gen_extract(struct SMT_var *v, unsigned begin, unsigned width);
+struct SMT_var* gen_shift_left(struct SMT_var* X, unsigned int cnt);
+struct SMT_var* gen_shift_right(struct SMT_var* X, unsigned int cnt, int SAT_var_new);
+struct SMT_var* gen_zero_extend(struct SMT_var *in, int zeroes_to_add);
+struct SMT_var* gen_repeat(struct SMT_var *in, int times);
 void add_Tseitin_AND(int a, int b, int out);
 void add_Tseitin_EQ(int v1, int v2);
 void add_Tseitin_OR (int a, int b, int out);
 void add_Tseitin_OR_list(int var, int width, int var_out);
 void print_expr(struct expr* e);
 const char* op_name(enum OP op);
-struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2);
+struct SMT_var* gen_BVADD(struct SMT_var* v1, struct SMT_var* v2);
 void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width);
 void assure_TY_BOOL(const char* func, struct SMT_var* v);
 void assure_TY_BITVEC(const char* func, struct SMT_var* v);
@@ -540,11 +540,11 @@ void add_comment(const char* fmt, ...)
 	clauses.push_back(c);
 };
 
-struct SMT_var* generate_const(uint32_t val, int width)
+struct SMT_var* gen_const(uint32_t val, int width)
 {
 	//printf ("%s(%d, %d)\n", __FUNCTION__, val, width);
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, width);
-	add_comment("generate_const(val=%d, width=%d). SAT_var=[%d..%d]", val, width, rt->SAT_var, rt->SAT_var+width-1);
+	add_comment("gen_const(val=%d, width=%d). SAT_var=[%d..%d]", val, width, rt->SAT_var, rt->SAT_var+width-1);
 	for (int i=0; i<width; i++)
 	{
 		if ((val>>i)&1)
@@ -567,22 +567,22 @@ void add_Tseitin_NOT(int v1, int v2)
 	add_clause2 (v1, v2);
 }
 
-struct SMT_var* generate_NOT(struct SMT_var* v)
+struct SMT_var* gen_NOT(struct SMT_var* v)
 {
 	assure_TY_BOOL("not", v);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_NOT id (SMT) %s, (SAT) var=%d, out (SMT) id=%s out (SAT) var=%d", v->id, v->SAT_var, rt->id, rt->SAT_var);
+	add_comment ("gen_NOT id (SMT) %s, (SAT) var=%d, out (SMT) id=%s out (SAT) var=%d", v->id, v->SAT_var, rt->id, rt->SAT_var);
 	add_Tseitin_NOT (rt->SAT_var, v->SAT_var);
 	return rt;
 };
 
-struct SMT_var* generate_BVNOT(struct SMT_var* v)
+struct SMT_var* gen_BVNOT(struct SMT_var* v)
 {
 	assure_TY_BITVEC("bvnot", v);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v->width);
-	add_comment ("generate_BVNOT");
+	add_comment ("gen_BVNOT");
 	for (int i=0; i<v->width; i++)
 		add_Tseitin_NOT (rt->SAT_var+i, v->SAT_var+i);
 	return rt;
@@ -608,12 +608,12 @@ void assure_TY_BOOL(const char* func, struct SMT_var* v)
 	exit(0);
 }
 
-struct SMT_var* generate_BVNEG(struct SMT_var* v)
+struct SMT_var* gen_BVNEG(struct SMT_var* v)
 {
 	assure_TY_BITVEC("bvneg", v);
 
-	add_comment ("generate_BVNEG");
-	return generate_BVADD(generate_BVNOT(v), generate_const(1, v->width));
+	add_comment ("gen_BVNEG");
+	return gen_BVADD(gen_BVNOT(v), gen_const(1, v->width));
 };
 
 void add_Tseitin_XOR(int v1, int v2, int v3)
@@ -670,7 +670,7 @@ void add_FA(int a, int b, int cin, int s, int cout)
 #endif
 };
 
-void generate_adder(struct SMT_var* a, struct SMT_var* b, struct SMT_var *carry_in, // inputs
+void gen_adder(struct SMT_var* a, struct SMT_var* b, struct SMT_var *carry_in, // inputs
 	struct SMT_var** sum, struct SMT_var** carry_out) // outputs
 {
 	assure_TY_BITVEC("adder", a);
@@ -697,7 +697,7 @@ void generate_adder(struct SMT_var* a, struct SMT_var* b, struct SMT_var *carry_
 	add_Tseitin_EQ(carry_out_tmp, (*carry_out)->SAT_var);
 };
 
-struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVADD(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvadd", v1);
 	assure_TY_BITVEC("bvadd", v2);
@@ -705,7 +705,7 @@ struct SMT_var* generate_BVADD(struct SMT_var* v1, struct SMT_var* v2)
 
 	struct SMT_var *sum;
 	struct SMT_var *carry_out;
-	generate_adder(v1, v2, var_always_false, &sum, &carry_out);
+	gen_adder(v1, v2, var_always_false, &sum, &carry_out);
 	return sum;
 };
 
@@ -730,7 +730,7 @@ void add_FS(int x, int y, int bin, int d, int bout)
 	add_clause3(bout, -d, -y);
 };
 
-void generate_subtractor(struct SMT_var* v1, struct SMT_var* v2, 
+void gen_subtractor(struct SMT_var* v1, struct SMT_var* v2, 
 	struct SMT_var** rt, struct SMT_var** borrow_out)
 {
 	assure_TY_BITVEC("subtractor", v1);
@@ -753,7 +753,7 @@ void generate_subtractor(struct SMT_var* v1, struct SMT_var* v2,
 	};
 };
 
-struct SMT_var* generate_BVSUB(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVSUB(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvsub", v1);
 	assure_TY_BITVEC("bvsub", v2);
@@ -762,12 +762,12 @@ struct SMT_var* generate_BVSUB(struct SMT_var* v1, struct SMT_var* v2)
 	struct SMT_var* rt=NULL;
 	struct SMT_var* borrow_out=NULL;
 
-	generate_subtractor(v1, v2, &rt, &borrow_out);
+	gen_subtractor(v1, v2, &rt, &borrow_out);
 
 	return rt;
 };
 
-struct SMT_var* generate_BVSUB_borrow(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVSUB_borrow(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC(__FUNCTION__, v1);
 	assure_TY_BITVEC(__FUNCTION__, v2);
@@ -776,49 +776,49 @@ struct SMT_var* generate_BVSUB_borrow(struct SMT_var* v1, struct SMT_var* v2)
 	struct SMT_var* rt=NULL;
 	struct SMT_var* borrow_out=NULL;
 
-	generate_subtractor(v1, v2, &rt, &borrow_out);
+	gen_subtractor(v1, v2, &rt, &borrow_out);
 
 	return borrow_out;
 };
 
-struct SMT_var* generate_BVULT(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVULT(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvult", v1);
 	assure_TY_BITVEC("bvult", v2);
 	assure_eq_widths("bvult", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_BVSUB_borrow(v1, v2);
+	return gen_BVSUB_borrow(v1, v2);
 };
 
-struct SMT_var* generate_BVULE(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVULE(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvule", v1);
 	assure_TY_BITVEC("bvule", v2);
 	assure_eq_widths("bvule", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_OR(generate_BVULT(v1, v2), generate_EQ(v1, v2));
+	return gen_OR(gen_BVULT(v1, v2), gen_EQ(v1, v2));
 };
 
-struct SMT_var* generate_BVUGT(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVUGT(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvugt", v1);
 	assure_TY_BITVEC("bvugt", v2);
 	assure_eq_widths("bvugt", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_BVSUB_borrow(v2, v1);
+	return gen_BVSUB_borrow(v2, v1);
 };
 
-struct SMT_var* generate_BVUGE(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVUGE(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvuge", v1);
 	assure_TY_BITVEC("bvuge", v2);
 	assure_eq_widths("bvuge", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_OR(generate_BVUGT(v1, v2), generate_EQ(v1, v2));
+	return gen_OR(gen_BVUGT(v1, v2), gen_EQ(v1, v2));
 };
 
 /*
@@ -830,7 +830,7 @@ see also from http://smtlib.cs.uiowa.edu
           (and (= ((_ extract |m-1| |m-1|) s) ((_ extract |m-1| |m-1|) t))
                (bvult s t)))
 */
-struct SMT_var* generate_BVSLT(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVSLT(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvslt", v1);
 	assure_TY_BITVEC("bvslt", v2);
@@ -838,67 +838,68 @@ struct SMT_var* generate_BVSLT(struct SMT_var* v1, struct SMT_var* v2)
 	add_comment (__FUNCTION__);
 
 	// get signs of operands:
-	struct SMT_var* v1_MSB=generate_extract(v1, v1->width-1, 1);
-	struct SMT_var* v2_MSB=generate_extract(v2, v2->width-1, 1);
+	struct SMT_var* v1_MSB=gen_extract(v1, v1->width-1, 1);
+	struct SMT_var* v2_MSB=gen_extract(v2, v2->width-1, 1);
 
-	struct SMT_var* MSBs_are_00=generate_AND(generate_EQ(v1_MSB, var_always_false), generate_EQ(v2_MSB, var_always_false));
-	struct SMT_var* MSBs_are_01=generate_AND(generate_EQ(v1_MSB, var_always_false), generate_EQ(v2_MSB, var_always_true));
-	struct SMT_var* MSBs_are_10=generate_AND(generate_EQ(v1_MSB, var_always_true), generate_EQ(v2_MSB, var_always_false));
-	struct SMT_var* MSBs_are_11=generate_AND(generate_EQ(v1_MSB, var_always_true), generate_EQ(v2_MSB, var_always_true));
+	struct SMT_var* MSBs_are_00=gen_AND(gen_EQ(v1_MSB, var_always_false), gen_EQ(v2_MSB, var_always_false));
+	struct SMT_var* MSBs_are_01=gen_AND(gen_EQ(v1_MSB, var_always_false), gen_EQ(v2_MSB, var_always_true));
+	struct SMT_var* MSBs_are_10=gen_AND(gen_EQ(v1_MSB, var_always_true), gen_EQ(v2_MSB, var_always_false));
+	struct SMT_var* MSBs_are_11=gen_AND(gen_EQ(v1_MSB, var_always_true), gen_EQ(v2_MSB, var_always_true));
 
-	struct SMT_var* unsigned_comparison=generate_BVULT(v1, v2);
+	struct SMT_var* unsigned_comparison=gen_BVULT(v1, v2);
 
+	// this is like switch():
 	return 
-		generate_ITE(MSBs_are_00, unsigned_comparison,
-		generate_ITE(MSBs_are_01, var_always_false,
-		generate_ITE(MSBs_are_10, var_always_true,
-		generate_ITE(MSBs_are_11, unsigned_comparison,
+		gen_ITE(MSBs_are_00, unsigned_comparison,
+		gen_ITE(MSBs_are_01, var_always_false,
+		gen_ITE(MSBs_are_10, var_always_true,
+		gen_ITE(MSBs_are_11, unsigned_comparison,
 			var_always_false)))); // default, but we can't get here
 };
 
-struct SMT_var* generate_BVSLE(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVSLE(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvsle", v1);
 	assure_TY_BITVEC("bvsle", v2);
 	assure_eq_widths("bvsle", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_OR(generate_BVSLT(v1, v2), generate_EQ(v1, v2));
+	return gen_OR(gen_BVSLT(v1, v2), gen_EQ(v1, v2));
 };
 
-struct SMT_var* generate_BVSGT(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVSGT(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvsgt", v1);
 	assure_TY_BITVEC("bvsgt", v2);
 	assure_eq_widths("bvsgt", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_BVSLT(v2, v1);
+	return gen_BVSLT(v2, v1);
 };
 
-struct SMT_var* generate_BVSGE(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVSGE(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvsge", v1);
 	assure_TY_BITVEC("bvsge", v2);
 	assure_eq_widths("bvsge", v1, v2);
 	add_comment (__FUNCTION__);
 
-	return generate_OR(generate_BVSGT(v1, v2), generate_EQ(v1, v2));
+	return gen_OR(gen_BVSGT(v1, v2), gen_EQ(v1, v2));
 };
 
 // it's like SUBGE in ARM CPU in ARM mode
 // rationale: used in divisor!
-void generate_BVSUBGE(struct SMT_var* enable, struct SMT_var* v1, struct SMT_var* v2,
+void gen_BVSUBGE(struct SMT_var* enable, struct SMT_var* v1, struct SMT_var* v2,
 	struct SMT_var** output, struct SMT_var** cond)
 {
 	assure_TY_BITVEC("bvsubge", v1);
 	assure_TY_BITVEC("bvsubge", v2);
 	assure_eq_widths("bvsubge", v1, v2);
 
-	*cond=generate_BVUGE(v1, v2);
-	struct SMT_var *diff=generate_BVSUB(v1, v2);
+	*cond=gen_BVUGE(v1, v2);
+	struct SMT_var *diff=gen_BVSUB(v1, v2);
 
-	*output=generate_ITE(enable, generate_ITE(*cond, diff, v1), v1);
+	*output=gen_ITE(enable, gen_ITE(*cond, diff, v1), v1);
 };
 
 void add_Tseitin_BV_is_zero (int SAT_var, int width, int SAT_var_out)
@@ -910,15 +911,15 @@ void add_Tseitin_BV_is_zero (int SAT_var, int width, int SAT_var_out)
 	add_Tseitin_NOT(tmp->SAT_var, SAT_var_out);
 };
 
-void generate_divisor (struct SMT_var* divident, struct SMT_var* divisor, struct SMT_var** q, struct SMT_var** r)
+void gen_divisor (struct SMT_var* divident, struct SMT_var* divisor, struct SMT_var** q, struct SMT_var** r)
 {
 	assure_TY_BITVEC("divident", divident);
 	assure_TY_BITVEC("divisor", divisor);
 	assure_eq_widths("divisor", divident, divisor);
 
 	int w=divident->width;
-	struct SMT_var* wide1=generate_zero_extend(divisor, w);
-	struct SMT_var* wide2=generate_shift_left(wide1, w-1);
+	struct SMT_var* wide1=gen_zero_extend(divisor, w);
+	struct SMT_var* wide2=gen_shift_left(wide1, w-1);
 
 	*q=create_internal_variable("quotient", TY_BITVEC, w);
 
@@ -929,48 +930,48 @@ void generate_divisor (struct SMT_var* divident, struct SMT_var* divisor, struct
 		add_Tseitin_BV_is_zero (wide2->SAT_var+w, w, enable->SAT_var);
 
 		struct SMT_var* cond;
-		generate_BVSUBGE(enable, divident, generate_extract(wide2, 0, w), &divident, &cond);
+		gen_BVSUBGE(enable, divident, gen_extract(wide2, 0, w), &divident, &cond);
 		add_Tseitin_EQ(cond->SAT_var, (*q)->SAT_var+w-1-i);
 		if (i+1==w)
 			break;
-		wide2=generate_shift_right(wide2, 1, var_always_false->SAT_var);
+		wide2=gen_shift_right(wide2, 1, var_always_false->SAT_var);
 	};
 	*r=divident;
 };
 
-struct SMT_var* generate_BVUDIV(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVUDIV(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var *q;
 	struct SMT_var *r;
 
-	generate_divisor (v1, v2, &q, &r);
+	gen_divisor (v1, v2, &q, &r);
 
 	return q;
 };
 
-struct SMT_var* generate_BVUREM(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVUREM(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var *q;
 	struct SMT_var *r;
 
-	generate_divisor (v1, v2, &q, &r);
+	gen_divisor (v1, v2, &q, &r);
 
 	return r;
 };
 
-struct SMT_var* generate_XOR(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_XOR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	if (v1->width!=1 || v2->width!=1)
 		die ("line %d: sort mismatch, xor requires 1-bit bools or bitvecs, you supplied %d and %d\n", yylineno, v1->width, v2->width);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_XOR id1 (SMT) %s id2 (SMT) %s var1 (SAT) %d var2 (SAT) %d out (SMT) id %s out (SAT) var=%d",
+	add_comment ("gen_XOR id1 (SMT) %s id2 (SMT) %s var1 (SAT) %d var2 (SAT) %d out (SMT) id %s out (SAT) var=%d",
 		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
 	add_Tseitin_XOR (v1->SAT_var, v2->SAT_var, rt->SAT_var);
 	return rt;
 };
 
-struct SMT_var* generate_BVAND(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVAND(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvand", v1);
 	assure_TY_BITVEC("bvand", v2);
@@ -997,14 +998,14 @@ void assure_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2)
 
 };
 
-struct SMT_var* generate_BVOR(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVOR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvor", v1);
 	assure_TY_BITVEC("bvor", v2);
 	assure_eq_widths("bvor", v1, v2);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
-	add_comment ("generate_BVOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
+	add_comment ("gen_BVOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
 		v1->SAT_var, v1->SAT_var+v1->width-1,
 		v2->SAT_var, v2->SAT_var+v2->width-1);
 	for (int i=0; i<v1->width; i++)
@@ -1012,14 +1013,14 @@ struct SMT_var* generate_BVOR(struct SMT_var* v1, struct SMT_var* v2)
 	return rt;
 };
 
-struct SMT_var* generate_BVXOR(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_BVXOR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	assure_TY_BITVEC("bvxor", v1);
 	assure_TY_BITVEC("bvxor", v2);
 	assure_eq_widths("bvxor", v1, v2);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BITVEC, v1->width);
-	add_comment ("generate_BVXOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
+	add_comment ("gen_BVXOR v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]",
 		v1->SAT_var, v1->SAT_var+v1->width-1,
 		v2->SAT_var, v2->SAT_var+v2->width-1);
 	for (int i=0; i<v1->width; i++)
@@ -1044,7 +1045,7 @@ void add_Tseitin_OR_list(int var, int width, int var_out)
 		add_clause2(-(var+i), var_out);
 };
 
-struct SMT_var* generate_OR_list(int var, int width)
+struct SMT_var* gen_OR_list(int var, int width)
 {
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("%s(var=%d, width=%d), var out (SAT) %d", __FUNCTION__, var, width, rt->SAT_var);
@@ -1052,7 +1053,7 @@ struct SMT_var* generate_OR_list(int var, int width)
 	return rt;
 };
 
-struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_EQ(struct SMT_var* v1, struct SMT_var* v2)
 {
 	//printf ("%s() v1=%d v2=%d\n", __FUNCTION__, v1->var_no, v2->var_no);
 	if (v1->width==1)
@@ -1064,9 +1065,9 @@ struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
 			printf ("v2=%s type=%d width=%d\n", v2->id, v2->type, v2->width);
 			die("");
 		};
-		add_comment ("generate_EQ id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d", v1->id, v2->id, v1->SAT_var, v2->SAT_var);
+		add_comment ("gen_EQ id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d", v1->id, v2->id, v1->SAT_var, v2->SAT_var);
 		//current_indent++;
-		struct SMT_var *v=generate_NOT(generate_XOR(v1, v2));
+		struct SMT_var *v=gen_NOT(gen_XOR(v1, v2));
 		//current_indent--;
 		//printf ("%s() returns %s (Bool)\n", __FUNCTION__, v->id);
 		return v;
@@ -1076,19 +1077,19 @@ struct SMT_var* generate_EQ(struct SMT_var* v1, struct SMT_var* v2)
 		assure_TY_BITVEC("=", v2);
 		assure_eq_widths("=", v1, v2);
 
-		add_comment ("generate_EQ for two bitvectors, v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]", 
+		add_comment ("gen_EQ for two bitvectors, v1 (SAT) [%d...%d], v2 (SAT) [%d...%d]", 
 			v1->SAT_var, v1->SAT_var+v1->width-1,
 			v2->SAT_var, v2->SAT_var+v2->width-1);
-		struct SMT_var* t=generate_BVXOR(v1,v2);
-		struct SMT_var* v=generate_NOT(generate_OR_list(t->SAT_var, t->width));
+		struct SMT_var* t=gen_BVXOR(v1,v2);
+		struct SMT_var* v=gen_NOT(gen_OR_list(t->SAT_var, t->width));
 		//printf ("%s() returns %s (bitvec %d)\n", __FUNCTION__, v->id, v->width);
 		return v;
 	};
 };
 
-struct SMT_var* generate_NEQ(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_NEQ(struct SMT_var* v1, struct SMT_var* v2)
 {
-	return generate_NOT(generate_EQ(v1,v2));
+	return gen_NOT(gen_EQ(v1,v2));
 };
 
 void add_Tseitin_AND(int a, int b, int out)
@@ -1099,10 +1100,10 @@ void add_Tseitin_AND(int a, int b, int out)
 	add_clause2 (b, -out);
 };
 
-struct SMT_var* generate_AND(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_AND(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_AND id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d", 
+	add_comment ("gen_AND id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d", 
 		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
 	add_Tseitin_AND(v1->SAT_var, v2->SAT_var, rt->SAT_var);
 	return rt;
@@ -1114,7 +1115,7 @@ void add_Tseitin_mult_by_bit(int width, int SAT_var_in, int SAT_var_out, int SAT
 		add_Tseitin_AND(SAT_var_in+i, SAT_var_bit, SAT_var_out+i);
 };
 /*
-struct SMT_var* generate_mult_by_bit(struct SMT_var *in, struct SMT_var* bit)
+struct SMT_var* gen_mult_by_bit(struct SMT_var *in, struct SMT_var* bit)
 {
 	assert (in->type==TY_BITVEC);
 	assert (bit->type==TY_BOOL);
@@ -1150,7 +1151,7 @@ void fix_BV_to_zero (int v, int width)
 		add_clause1(-(v+i));
 };
 
-struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add)
+struct SMT_var* gen_zero_extend(struct SMT_var *in, int zeroes_to_add)
 {
 	int final_width=in->width+zeroes_to_add;
 	struct SMT_var* rt=create_internal_variable("zero_extended", TY_BITVEC, final_width);
@@ -1161,7 +1162,7 @@ struct SMT_var* generate_zero_extend(struct SMT_var *in, int zeroes_to_add)
 	return rt;
 };
 
-struct SMT_var* generate_repeat_from_SAT_var(int SAT_var, int width, int times)
+struct SMT_var* gen_repeat_from_SAT_var(int SAT_var, int width, int times)
 {
 	int final_width=width*times;
 	struct SMT_var* rt=create_internal_variable("repeat", TY_BITVEC, final_width);
@@ -1172,13 +1173,13 @@ struct SMT_var* generate_repeat_from_SAT_var(int SAT_var, int width, int times)
 	return rt;
 };
 
-struct SMT_var* generate_repeat(struct SMT_var *in, int times)
+struct SMT_var* gen_repeat(struct SMT_var *in, int times)
 {
-	return generate_repeat_from_SAT_var(in->SAT_var, in->width, times);
+	return gen_repeat_from_SAT_var(in->SAT_var, in->width, times);
 };
 
 // "cnt" is not a SMT variable!
-struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt)
+struct SMT_var* gen_shift_left(struct SMT_var* X, unsigned int cnt)
 {
 	int w=X->width;
 
@@ -1193,7 +1194,7 @@ struct SMT_var* generate_shift_left(struct SMT_var* X, unsigned int cnt)
 
 // cnt is not a SMT variable!
 // SAT_var_new can be TRUE in case of bvashr, or it can just be connected to always_false
-struct SMT_var* generate_shift_right(struct SMT_var* X, unsigned int cnt, int SAT_var_new)
+struct SMT_var* gen_shift_right(struct SMT_var* X, unsigned int cnt, int SAT_var_new)
 {
 	int w=X->width;
 
@@ -1222,7 +1223,7 @@ int MSB_of_SMT_var (struct SMT_var *v)
 // X=ITE((cnt>>2)&1, X<<4, X)
 // i.e., if the bit is set in cnt, shift X by that ammount of bits, or do nothing otherwise
 
-struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, bool direction, bool arith)
+struct SMT_var* gen_shifter_real (struct SMT_var* X, struct SMT_var* cnt, bool direction, bool arith)
 {
 	int w=X->width;
 
@@ -1239,9 +1240,9 @@ struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, b
 	for (int i=0; i<bits_in_selector; i++)
 	{
 		if (direction==false)
-			tmp=generate_shift_left(in, 1<<i);
+			tmp=gen_shift_left(in, 1<<i);
 		else
-			tmp=generate_shift_right(in, 1<<i, arith ? MSB_of_SMT_var(X) : var_always_false->SAT_var);
+			tmp=gen_shift_right(in, 1<<i, arith ? MSB_of_SMT_var(X) : var_always_false->SAT_var);
 
 		out=create_internal_variable("tmp", TY_BITVEC, w);
 
@@ -1258,14 +1259,14 @@ struct SMT_var* generate_shifter_real (struct SMT_var* X, struct SMT_var* cnt, b
 	// 0x80 >>s cnt, where cnt>8, must be 0xff! so fill result with MSB(input)
 	struct SMT_var *default_val;
 	if (arith==false)
-		default_val=generate_const(0, w);
+		default_val=gen_const(0, w);
 	else
-		default_val=generate_repeat_from_SAT_var(MSB_of_SMT_var(X), 1, w);
+		default_val=gen_repeat_from_SAT_var(MSB_of_SMT_var(X), 1, w);
 
-	return generate_ITE(disable_shifter, default_val, in);
+	return gen_ITE(disable_shifter, default_val, in);
 };
 
-struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction, bool arith)
+struct SMT_var* gen_shifter (struct SMT_var* X, struct SMT_var* cnt, bool direction, bool arith)
 {
 	int w=X->width;
 
@@ -1277,37 +1278,37 @@ struct SMT_var* generate_shifter (struct SMT_var* X, struct SMT_var* cnt, bool d
 		//printf ("%s() width=%d\n", __FUNCTION__, w);
 		int new_w=1<<(mylog2(w)+1);
 		//printf ("%s() extending it to width=%d\n", __FUNCTION__, new_w);
-		X=generate_zero_extend(X, new_w-w);
-		cnt=generate_zero_extend(cnt, new_w-w);
+		X=gen_zero_extend(X, new_w-w);
+		cnt=gen_zero_extend(cnt, new_w-w);
 	}
 
-	struct SMT_var* rt=generate_shifter_real(X, cnt, direction, arith);
+	struct SMT_var* rt=gen_shifter_real(X, cnt, direction, arith);
 
 	if (popcount64c (w)!=1)
 	{
 		// X is not in 2^n form
-		rt=generate_extract (rt, 0, w);
+		rt=gen_extract (rt, 0, w);
 	};
 
 	return rt;
 };
 
-struct SMT_var* generate_BVSHL (struct SMT_var* X, struct SMT_var* cnt)
+struct SMT_var* gen_BVSHL (struct SMT_var* X, struct SMT_var* cnt)
 {
-	return generate_shifter (X, cnt, false, false);
+	return gen_shifter (X, cnt, false, false);
 };
 
-struct SMT_var* generate_BVLSHR (struct SMT_var* X, struct SMT_var* cnt)
+struct SMT_var* gen_BVLSHR (struct SMT_var* X, struct SMT_var* cnt)
 {
-	return generate_shifter (X, cnt, true, false);
+	return gen_shifter (X, cnt, true, false);
 };
 
-struct SMT_var* generate_BVASHR (struct SMT_var* X, struct SMT_var* cnt)
+struct SMT_var* gen_BVASHR (struct SMT_var* X, struct SMT_var* cnt)
 {
-	return generate_shifter (X, cnt, true, true);
+	return gen_shifter (X, cnt, true, true);
 };
 
-struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned width)
+struct SMT_var* gen_extract(struct SMT_var *v, unsigned begin, unsigned width)
 {
 	struct SMT_var* rt=create_internal_variable("extracted", TY_BITVEC, width);
 	add_Tseitin_EQ_bitvecs(width, rt->SAT_var, v->SAT_var+begin);
@@ -1318,7 +1319,7 @@ struct SMT_var* generate_extract(struct SMT_var *v, unsigned begin, unsigned wid
 // type:
 // 0 - usual
 // 1 - no overflow
-struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
+struct SMT_var* gen_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 {
 	assure_TY_BITVEC("bvmul", X);
 	assure_TY_BITVEC("bvmul", Y);
@@ -1327,7 +1328,7 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 	int w=X->width;
 	int final_w=w*2;
 
-	struct SMT_var* X_extended=generate_zero_extend(X, w);
+	struct SMT_var* X_extended=gen_zero_extend(X, w);
 
 	struct SMT_var* partial_products1[w]; // warning: GCC (?) extension
 	struct SMT_var* partial_products2[w]; // warning: GCC (?) extension
@@ -1337,20 +1338,20 @@ struct SMT_var* generate_BVMUL(struct SMT_var* X, struct SMT_var* Y, int type)
 		partial_products1[i]=create_internal_variable("partial_product1", TY_BITVEC, final_w);
 		add_Tseitin_mult_by_bit(final_w, X_extended->SAT_var, partial_products1[i]->SAT_var, Y->SAT_var+i);
 		// TODO how to get rid of new variables creation?!
-		partial_products2[i]=generate_shift_left(partial_products1[i], i);
+		partial_products2[i]=gen_shift_left(partial_products1[i], i);
 	};
 
 	struct SMT_var *product=partial_products2[0];
 
 	for (int i=1; i<w; i++)
-		product=generate_BVADD(product, partial_products2[i]);
+		product=gen_BVADD(product, partial_products2[i]);
 
 	// fix high part at 0?
 	if (type==1)
 		fix_BV_to_zero(product->SAT_var+w, w);
 
 	// leave only low part of product, same width as in both inputs:
-	return generate_extract(product, 0, w);
+	return gen_extract(product, 0, w);
 };
 
 void add_Tseitin_OR (int a, int b, int out)
@@ -1360,10 +1361,10 @@ void add_Tseitin_OR (int a, int b, int out)
 	add_clause2 (-b, out);
 };
 
-struct SMT_var* generate_OR(struct SMT_var* v1, struct SMT_var* v2)
+struct SMT_var* gen_OR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("generate_OR id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d",
+	add_comment ("gen_OR id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d",
 		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
 
 	add_Tseitin_OR (v1->SAT_var, v2->SAT_var, rt->SAT_var);
@@ -1388,7 +1389,7 @@ void add_Tseitin_ITE_BV (int s, int t, int f, int x, int width)
 		add_Tseitin_ITE(s, t+i, f+i, x+i);
 };
 
-struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f)
+struct SMT_var* gen_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f)
 {
 	//assure_TY_BOOL("ite", sel);
 	if (sel->width!=1)
@@ -1408,7 +1409,7 @@ struct SMT_var* generate_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_
 	return rt;
 }
 
-struct SMT_var* generate(struct expr* e)
+struct SMT_var* gen(struct expr* e)
 {
 /*
 	printf ("%s() ", __FUNCTION__);
@@ -1420,36 +1421,36 @@ struct SMT_var* generate(struct expr* e)
 		struct SMT_var* rt=find_variable(e->id);
 		if(rt==NULL)
 			die ("line %d: variable %s hasn't been declared\n", yylineno, e->id);
-		//printf ("generate -> %d (by id %s)\n", rt->var_no, e->id);
+		//printf ("gen -> %d (by id %s)\n", rt->var_no, e->id);
 		rt->e=e;
 		return rt;
 	};
 
 	if (e->type==EXPR_CONST)
 	{
-		//printf ("generate() const\n");
-		struct SMT_var* rt=generate_const(e->const_val, e->const_width);
+		//printf ("gen() const\n");
+		struct SMT_var* rt=gen_const(e->const_val, e->const_width);
 		rt->e=e;
 		return rt;
 	};
 	
 	if (e->type==EXPR_ZERO_EXTEND)
 	{
-		struct SMT_var* rt=generate_zero_extend(generate(e->op1), e->const_val);
+		struct SMT_var* rt=gen_zero_extend(gen(e->op1), e->const_val);
 		rt->e=e;
 		return rt;
 	};
 
 	if (e->type==EXPR_REPEAT)
 	{
-		struct SMT_var* rt=generate_repeat(generate(e->op1), e->const_val);
+		struct SMT_var* rt=gen_repeat(gen(e->op1), e->const_val);
 		rt->e=e;
 		return rt;
 	};
 
 	if (e->type==EXPR_EXTRACT)
 	{
-		struct SMT_var* rt=generate_extract(generate(e->op1), e->const_val, e->const_width);
+		struct SMT_var* rt=gen_extract(gen(e->op1), e->const_val, e->const_width);
 		rt->e=e;
 		return rt;
 	};
@@ -1459,11 +1460,11 @@ struct SMT_var* generate(struct expr* e)
 		struct SMT_var* rt;
 		switch (e->op)
 		{
-			case OP_NOT:		rt=generate_NOT (generate (e->op1)); break;
-			case OP_BVNOT:		rt=generate_BVNOT (generate (e->op1)); break;
-			case OP_BVNEG:		rt=generate_BVNEG (generate (e->op1)); break;
-			case OP_BVSHL1:		rt=generate_shift_left (generate (e->op1), 1); break;
-			case OP_BVSHR1:		rt=generate_shift_right (generate (e->op1), 1, var_always_false->SAT_var); break;
+			case OP_NOT:		rt=gen_NOT (gen (e->op1)); break;
+			case OP_BVNOT:		rt=gen_BVNOT (gen (e->op1)); break;
+			case OP_BVNEG:		rt=gen_BVNEG (gen (e->op1)); break;
+			case OP_BVSHL1:		rt=gen_shift_left (gen (e->op1), 1); break;
+			case OP_BVSHR1:		rt=gen_shift_right (gen (e->op1), 1, var_always_false->SAT_var); break;
 			default:		assert(0);
 		};
 		rt->e=e;
@@ -1471,44 +1472,44 @@ struct SMT_var* generate(struct expr* e)
 	};
 	if (e->type==EXPR_BINARY)
 	{
-		struct SMT_var* v1=generate(e->op1);
-		struct SMT_var* v2=generate(e->op2);
+		struct SMT_var* v1=gen(e->op1);
+		struct SMT_var* v2=gen(e->op2);
 		struct SMT_var* rt;
 		switch (e->op)
 		{
-			case OP_EQ:		rt=generate_EQ (v1, v2); break;
-			case OP_NEQ:		rt=generate_NEQ (v1, v2); break;
-			case OP_OR:		rt=generate_OR (v1, v2); break;
-			case OP_XOR:		rt=generate_XOR (v1, v2); break;
-			case OP_AND:		rt=generate_AND (v1, v2); break;
-			case OP_BVOR:		rt=generate_BVOR (v1, v2); break;
-			case OP_BVXOR:		rt=generate_BVXOR (v1, v2); break;
-			case OP_BVAND:		rt=generate_BVAND (v1, v2); break;
-			case OP_BVADD:		rt=generate_BVADD (v1, v2); break;
-			case OP_BVSUB:		rt=generate_BVSUB (v1, v2); break;
-			case OP_BVMUL:		rt=generate_BVMUL (v1, v2, 0); break;
-			case OP_BVMUL_NO_OVERFLOW:	rt=generate_BVMUL (v1, v2, 1); break;
-			case OP_BVUGE:		rt=generate_BVUGE (v1, v2); break;
-			case OP_BVULE:		rt=generate_BVULE (v1, v2); break;
-			case OP_BVUGT:		rt=generate_BVUGT (v1, v2); break;
-			case OP_BVULT:		rt=generate_BVULT (v1, v2); break;
-			case OP_BVSGE:		rt=generate_BVSGE (v1, v2); break;
-			case OP_BVSLE:		rt=generate_BVSLE (v1, v2); break;
-			case OP_BVSGT:		rt=generate_BVSGT (v1, v2); break;
-			case OP_BVSLT:		rt=generate_BVSLT (v1, v2); break;
+			case OP_EQ:		rt=gen_EQ (v1, v2); break;
+			case OP_NEQ:		rt=gen_NEQ (v1, v2); break;
+			case OP_OR:		rt=gen_OR (v1, v2); break;
+			case OP_XOR:		rt=gen_XOR (v1, v2); break;
+			case OP_AND:		rt=gen_AND (v1, v2); break;
+			case OP_BVOR:		rt=gen_BVOR (v1, v2); break;
+			case OP_BVXOR:		rt=gen_BVXOR (v1, v2); break;
+			case OP_BVAND:		rt=gen_BVAND (v1, v2); break;
+			case OP_BVADD:		rt=gen_BVADD (v1, v2); break;
+			case OP_BVSUB:		rt=gen_BVSUB (v1, v2); break;
+			case OP_BVMUL:		rt=gen_BVMUL (v1, v2, 0); break;
+			case OP_BVMUL_NO_OVERFLOW:	rt=gen_BVMUL (v1, v2, 1); break;
+			case OP_BVUGE:		rt=gen_BVUGE (v1, v2); break;
+			case OP_BVULE:		rt=gen_BVULE (v1, v2); break;
+			case OP_BVUGT:		rt=gen_BVUGT (v1, v2); break;
+			case OP_BVULT:		rt=gen_BVULT (v1, v2); break;
+			case OP_BVSGE:		rt=gen_BVSGE (v1, v2); break;
+			case OP_BVSLE:		rt=gen_BVSLE (v1, v2); break;
+			case OP_BVSGT:		rt=gen_BVSGT (v1, v2); break;
+			case OP_BVSLT:		rt=gen_BVSLT (v1, v2); break;
 			case OP_BVSUBGE:
 						{
 							struct SMT_var *output;
 							struct SMT_var *cond;
-							generate_BVSUBGE (var_always_true, v1, v2, &output, &cond);
+							gen_BVSUBGE (var_always_true, v1, v2, &output, &cond);
 							output->e=e;
 							return output;
 						};
-			case OP_BVUDIV:		rt=generate_BVUDIV (v1, v2); break;
-			case OP_BVUREM:		rt=generate_BVUREM (v1, v2); break;
-			case OP_BVSHL:		rt=generate_BVSHL (generate (e->op1), generate (e->op2)); break;
-			case OP_BVLSHR:		rt=generate_BVLSHR (generate (e->op1), generate (e->op2)); break;
-			case OP_BVASHR:		rt=generate_BVASHR (generate (e->op1), generate (e->op2)); break;
+			case OP_BVUDIV:		rt=gen_BVUDIV (v1, v2); break;
+			case OP_BVUREM:		rt=gen_BVUREM (v1, v2); break;
+			case OP_BVSHL:		rt=gen_BVSHL (gen (e->op1), gen (e->op2)); break;
+			case OP_BVLSHR:		rt=gen_BVLSHR (gen (e->op1), gen (e->op2)); break;
+			case OP_BVASHR:		rt=gen_BVASHR (gen (e->op1), gen (e->op2)); break;
 			default:		assert(0);
 		}
 		rt->e=e;
@@ -1519,11 +1520,11 @@ struct SMT_var* generate(struct expr* e)
 		assert (e->op==OP_ITE);
 		struct SMT_var* rt;
 
-		struct SMT_var* sel=generate(e->op1);
-		struct SMT_var* t=generate(e->op2);
-		struct SMT_var* f=generate(e->op3);
+		struct SMT_var* sel=gen(e->op1);
+		struct SMT_var* t=gen(e->op2);
+		struct SMT_var* f=gen(e->op3);
 
-		rt=generate_ITE(sel, t, f);
+		rt=gen_ITE(sel, t, f);
 		rt->e=e;
 		return rt;
 	};
@@ -1542,8 +1543,8 @@ void create_assert (struct expr* e)
 	// if expression has form (assert (= x y)), use add_Tseitin_EQ_bitvecs here
 	if (e->type==EXPR_BINARY && e->op==OP_EQ)
 	{
-		struct SMT_var *op1=generate(e->op1);
-		struct SMT_var *op2=generate(e->op2);
+		struct SMT_var *op1=gen(e->op1);
+		struct SMT_var *op2=gen(e->op2);
 /*
 		printf ("optimized\n");
 		printf ("op1. id==%s, e=", op1->id); print_expr(op1->e); printf ("\n");
@@ -1555,9 +1556,9 @@ void create_assert (struct expr* e)
 		return;
 	}
 
-	// otherwise, EQ will be generated and "grounded" to True,
+	// otherwise, EQ will be gend and "grounded" to True,
 	// which can be inefficient, because EQ is NOT-OR-XOR
-	struct SMT_var* v=generate(e);
+	struct SMT_var* v=gen(e);
 	add_comment ("%s() id=%s var=%d", __FUNCTION__, v->id, v->SAT_var);
 	add_clause1 (v->SAT_var); // v must be True
 };
@@ -1569,13 +1570,13 @@ void create_min_max (struct expr* e, bool min_max)
 	if (create_min_max_called)
 		die ("Due to limitations of MK85, only one minimize/maximize command is allowed\n");
 
-	struct SMT_var* v=generate(e);
+	struct SMT_var* v=gen(e);
 
 	assure_TY_BITVEC(__FUNCTION__, v);
 
 	// if "minimize", negate input value:
 	if (min_max==false)
-		v=generate_BVNEG(v);
+		v=gen_BVNEG(v);
 
 	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
 
