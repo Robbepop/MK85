@@ -96,6 +96,7 @@ struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, 
 	return rt;
 };
 
+// FIXME use STL here!
 struct expr* create_vararg_expr(enum OP t, struct expr* args)
 {
 /*
@@ -125,6 +126,8 @@ struct expr* create_distinct_expr(struct expr* args)
 {
 	// for 3 args:
 	// and (a!=b, a!=c, b!=c)
+
+	// FIXME use STL here!
 
 	// be sure at least two expr in chain:
 	if (args->next==NULL)
