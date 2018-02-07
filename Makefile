@@ -1,11 +1,15 @@
-COPT=-Wall -g -c -O3 -std=c++11
+COPT=-Wall -g -c -O3 -std=c++11 -fPIC
 #COPT=-Wall -g -pg -c -std=c++11
 
-all: MK85
+all: MK85 libMK85.so
 
 MK85: lex.yy.o y.tab.o MK85.o utils.o picosat.o
 	#g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
 	g++ MK85.o y.tab.o lex.yy.o utils.o picosat.o -L/usr/local/lib/ -g -o MK85
+
+libMK85.so: lex.yy.o y.tab.o MK85.o utils.o picosat.o
+	#g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
+	g++ -shared MK85.o y.tab.o lex.yy.o utils.o picosat.o -L/usr/local/lib/ -g -o libMK85.so
 
 picosat.o: picosat/picosat.h picosat/picosat.c
 	gcc $(COPT) picosat/picosat.c

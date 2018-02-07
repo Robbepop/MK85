@@ -3,8 +3,11 @@
 #include <stdint.h>
 
 // FIXME enum
-#define TY_BOOL 0
-#define TY_BITVEC 1
+enum TY
+{
+	TY_BOOL=0,
+	TY_BITVEC=1
+};
 
 enum OP
 {
@@ -42,7 +45,8 @@ enum OP
 	OP_ITE
 };
 
-// FIXME make zero_extend, repeat, extract as functions!
+// idea: make zero_extend, repeat, extract as functions!
+// but I can't...
 enum EXPR_TYPE
 {
 	EXPR_ID,
@@ -90,7 +94,7 @@ struct expr* create_repeat_expr(int times, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
 struct expr* create_ITE(struct expr* sel, struct expr* t, struct expr* f);
 
-struct SMT_var* create_variable(const char *name, int type, int width, int internal);
+struct SMT_var* create_variable(const char *name, enum TY type, int width, int internal);
 void init();
 void create_assert (struct expr* e);
 void create_min_max (struct expr* e, bool min_max);

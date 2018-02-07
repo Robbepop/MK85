@@ -315,7 +315,7 @@ int SAT_next_var_no=1;
 
 struct SMT_var
 {
-	int type; // TY_BOOL, TY_BITVEC
+	enum TY type; // TY_BOOL, TY_BITVEC
 	bool internal; // true for internal
 	char* id; // name
 	int SAT_var; // in SAT instance
@@ -379,7 +379,7 @@ struct SMT_var* find_variable(const char *id)
 	return NULL;
 };
 
-struct SMT_var* create_variable(const char *name, int type, int width, int internal)
+struct SMT_var* create_variable(const char *name, enum TY type, int width, int internal)
 {
 	if (type==TY_BOOL)
 		assert(width==1);
@@ -423,7 +423,7 @@ struct SMT_var* create_variable(const char *name, int type, int width, int inter
 
 int next_internal_var=1;
 
-struct SMT_var* create_internal_variable(const char* prefix, int type, int width)
+struct SMT_var* create_internal_variable(const char* prefix, enum TY type, int width)
 {
 	char tmp[128];
 	snprintf (tmp, sizeof(tmp), "%s!%d", prefix, next_internal_var);
