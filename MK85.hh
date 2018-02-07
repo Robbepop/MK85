@@ -2,7 +2,13 @@
 
 #include <stdint.h>
 
-// FIXME enum
+/*
+struct ctx
+{
+
+};
+*/
+
 enum TY
 {
 	TY_BOOL=0,

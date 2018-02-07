@@ -317,16 +317,16 @@ struct SMT_var
 {
 	enum TY type; // TY_BOOL, TY_BITVEC
 	bool internal; // true for internal
-	char* id; // name
+	char* id; // name, FIXME: std:string
 	int SAT_var; // in SAT instance
 	int width; // in bits, 1 for bool
 	// TODO: uint64_t? bitmap?
 	uint32_t val; // what we've got from from SAT-solver's results. 0/1 for Bool
 	struct expr* e;
-	struct SMT_var* next;
+	struct SMT_var* next; // FIXME: get rid of, use STL
 };
 
-struct SMT_var* vars=NULL;
+std::list<struct SMT_var*> vars;
 
 const char* false_true_s[2]={"false", "true"};
 
@@ -335,9 +335,10 @@ void dump_all_variables(bool dump_internal)
 	//for (struct SMT_var* v=vars; v; v=v->next)
 	//	printf ("type=%d id=%s width=%d val=0x%x\n", v->type, v->id, v->width, v->val);
 	printf ("(model\n");
-	for (struct SMT_var* v=vars; v; v=v->next)
+	//for (struct SMT_var* v=vars; v; v=v->next)
+	for (auto v : vars)
 	{
-		if (v->internal==1 && dump_internal==false)
+		if (v->internal && dump_internal==false)
 			continue; // skip internal variables
 
 		if (v->type==TY_BOOL)
@@ -368,10 +369,18 @@ void dump_all_variables(bool dump_internal)
 
 struct SMT_var* find_variable(const char *id)
 {
+/*
 	if (vars==NULL)
 		return NULL;
 		
 	for (struct SMT_var* v=vars; v; v=v->next)
+	{
+		if (strcmp(id, v->id)==0)
+			return v;
+	};
+	return NULL;
+*/
+	for (auto v : vars)
 	{
 		if (strcmp(id, v->id)==0)
 			return v;
@@ -389,6 +398,7 @@ struct SMT_var* create_variable(const char *name, enum TY type, int width, int i
 	if (find_variable(name)!=NULL)
 		die ("Fatal error: variable %s is already defined\n", name);
 
+/*
 	struct SMT_var* v;
 	if (vars==NULL)
 	{
@@ -400,8 +410,10 @@ struct SMT_var* create_variable(const char *name, enum TY type, int width, int i
 		v->next=(struct SMT_var*)xmalloc(sizeof(struct SMT_var));
 		v=v->next;
 	};
+*/
+	struct SMT_var *v=new(struct SMT_var);
 	v->type=type;
-	v->id=xstrdup(name); // TODO replace strdup with something
+	v->id=xstrdup(name); // FIXME: STL
 	if (type==TY_BOOL)
 	{
 		v->SAT_var=SAT_next_var_no;
@@ -418,6 +430,7 @@ struct SMT_var* create_variable(const char *name, enum TY type, int width, int i
 		assert(0);
 	//printf ("%s() %s var_no=%d\n", __FUNCTION__, name, v->var_no);
 	v->internal=internal;
+	vars.push_back(v);
 	return v;
 }
 
@@ -1637,7 +1650,8 @@ uint32_t SAT_solution_to_value(int* a, int w)
 
 void fill_variables_from_SAT_solver_response(int *array)
 {
-	for (struct SMT_var* v=vars; v; v=v->next)
+	//for (struct SMT_var* v=vars; v; v=v->next)
+	for (auto v : vars)
 	{
 		// do not set internal variables, for faster results:
 		if (dump_internal_variables==false && v->internal)
