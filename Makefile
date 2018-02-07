@@ -7,7 +7,7 @@ MK85: lex.yy.o y.tab.o MK85.o utils.o picosat.o
 	#g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
 	g++ MK85.o y.tab.o lex.yy.o utils.o picosat.o -L/usr/local/lib/ -g -o MK85
 
-libMK85.so: lex.yy.o y.tab.o MK85.o utils.o picosat.o
+libMK85.so: MK85.o utils.o picosat.o
 	#g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
 	g++ -shared MK85.o y.tab.o lex.yy.o utils.o picosat.o -L/usr/local/lib/ -g -o libMK85.so
 
