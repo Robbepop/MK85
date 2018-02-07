@@ -317,7 +317,7 @@ struct SMT_var
 {
 	enum TY type; // TY_BOOL, TY_BITVEC
 	bool internal; // true for internal
-	char* id; // name, FIXME: std:string
+	std::string id; // name
 	int SAT_var; // in SAT instance
 	int width; // in bits, 1 for bool
 	// TODO: uint64_t? bitmap?
@@ -332,10 +332,7 @@ const char* false_true_s[2]={"false", "true"};
 
 void dump_all_variables(bool dump_internal)
 {
-	//for (struct SMT_var* v=vars; v; v=v->next)
-	//	printf ("type=%d id=%s width=%d val=0x%x\n", v->type, v->id, v->width, v->val);
 	printf ("(model\n");
-	//for (struct SMT_var* v=vars; v; v=v->next)
 	for (auto v : vars)
 	{
 		if (v->internal && dump_internal==false)
@@ -345,18 +342,18 @@ void dump_all_variables(bool dump_internal)
 		{
 			assert (v->val<=1);
 			if (dump_internal==false)
-				printf ("\t(define-fun %s () Bool %s)\n", v->id, false_true_s[v->val]);
+				printf ("\t(define-fun %s () Bool %s)\n", v->id.c_str(), false_true_s[v->val]);
 			else
-				printf ("\t(define-fun %s () Bool %s) ; SAT_var=%d\n", v->id, false_true_s[v->val], v->SAT_var);
+				printf ("\t(define-fun %s () Bool %s) ; SAT_var=%d\n", v->id.c_str(), false_true_s[v->val], v->SAT_var);
 		}
 		else if (v->type==TY_BITVEC)
 		{
 			if (dump_internal==false)
   				printf ("\t(define-fun %s () (_ BitVec %d) (_ bv%u %d)) ; 0x%x\n",
-					v->id, v->width, v->val, v->width, v->val);
+					v->id.c_str(), v->width, v->val, v->width, v->val);
 			else
   				printf ("\t(define-fun %s () (_ BitVec %d) (_ bv%u %d)) ; 0x%x SAT_var=%d\n",
-					v->id, v->width, v->val, v->width, v->val, v->SAT_var);
+					v->id.c_str(), v->width, v->val, v->width, v->val, v->SAT_var);
 		}
 		else
 		{
@@ -367,53 +364,27 @@ void dump_all_variables(bool dump_internal)
 
 };
 
-struct SMT_var* find_variable(const char *id)
+struct SMT_var* find_variable(std::string id)
 {
-/*
-	if (vars==NULL)
-		return NULL;
-		
-	for (struct SMT_var* v=vars; v; v=v->next)
-	{
-		if (strcmp(id, v->id)==0)
-			return v;
-	};
-	return NULL;
-*/
 	for (auto v : vars)
 	{
-		if (strcmp(id, v->id)==0)
+		if (id==v->id)
 			return v;
 	};
 	return NULL;
 };
 
-struct SMT_var* create_variable(const char *name, enum TY type, int width, int internal)
+struct SMT_var* create_variable(std::string name, enum TY type, int width, int internal)
 {
 	if (type==TY_BOOL)
 		assert(width==1);
 
-	//printf ("%s(%s, %d)\n", __FUNCTION__, name, type);
-	//printf ("%s() line %d variables=%p\n", __FUNCTION__, __LINE__, vars);
 	if (find_variable(name)!=NULL)
-		die ("Fatal error: variable %s is already defined\n", name);
+		die ("Fatal error: variable %s is already defined\n", name.c_str());
 
-/*
-	struct SMT_var* v;
-	if (vars==NULL)
-	{
-		v=vars=(struct SMT_var*)xmalloc(sizeof(struct SMT_var));
-	}
-	else
-	{
-		for (v=vars; v->next; v=v->next);
-		v->next=(struct SMT_var*)xmalloc(sizeof(struct SMT_var));
-		v=v->next;
-	};
-*/
 	struct SMT_var *v=new(struct SMT_var);
 	v->type=type;
-	v->id=xstrdup(name); // FIXME: STL
+	v->id=name;
 	if (type==TY_BOOL)
 	{
 		v->SAT_var=SAT_next_var_no;
@@ -585,7 +556,7 @@ struct SMT_var* gen_NOT(struct SMT_var* v)
 	assure_TY_BOOL("not", v);
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
-	add_comment ("gen_NOT id (SMT) %s, (SAT) var=%d, out (SMT) id=%s out (SAT) var=%d", v->id, v->SAT_var, rt->id, rt->SAT_var);
+	add_comment ("gen_NOT id (SMT) %s, (SAT) var=%d, out (SMT) id=%s out (SAT) var=%d", v->id.c_str(), v->SAT_var, rt->id.c_str(), rt->SAT_var);
 	add_Tseitin_NOT (rt->SAT_var, v->SAT_var);
 	return rt;
 };
@@ -606,7 +577,7 @@ void assure_TY_BITVEC(const char* func, struct SMT_var* v)
 {
 	if (v->type==TY_BITVEC)
 		return;
-	printf ("Error: sort mismatch: '%s' takes bitvec expression, but %s is not\n", func, v->id);
+	printf ("Error: sort mismatch: '%s' takes bitvec expression, but %s is not\n", func, v->id.c_str());
 	printf ("which is: "); print_expr (v->e); printf ("\n");
 	exit(0);
 }
@@ -616,7 +587,7 @@ void assure_TY_BOOL(const char* func, struct SMT_var* v)
 {
 	if (v->type==TY_BOOL)
 		return;
-	printf ("Error: sort mismatch: '%s' takes boolean expression, but %s is not\n", func, v->id);
+	printf ("Error: sort mismatch: '%s' takes boolean expression, but %s is not\n", func, v->id.c_str());
 	printf ("which is: "); print_expr (v->e); printf ("\n");
 	exit(0);
 }
@@ -979,7 +950,7 @@ struct SMT_var* gen_XOR(struct SMT_var* v1, struct SMT_var* v2)
 
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("gen_XOR id1 (SMT) %s id2 (SMT) %s var1 (SAT) %d var2 (SAT) %d out (SMT) id %s out (SAT) var=%d",
-		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
+		v1->id.c_str(), v2->id.c_str(), v1->SAT_var, v2->SAT_var, rt->id.c_str(), rt->SAT_var);
 	add_Tseitin_XOR (v1->SAT_var, v2->SAT_var, rt->SAT_var);
 	return rt;
 };
@@ -1005,8 +976,8 @@ void assure_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2)
 
 	printf ("line %d. %s can't work on bitvectors of different widths. you supplied %d and %d\n",
 		yylineno, name, v1->width, v2->width);
-	printf ("v1. id==%s, e=", v1->id); print_expr(v1->e); printf ("\n");
-	printf ("v2. id==%s, e=", v2->id); print_expr(v2->e); printf ("\n");
+	printf ("v1. id==%s, e=", v1->id.c_str()); print_expr(v1->e); printf ("\n");
+	printf ("v2. id==%s, e=", v2->id.c_str()); print_expr(v2->e); printf ("\n");
 	exit(0);
 
 };
@@ -1074,11 +1045,11 @@ struct SMT_var* gen_EQ(struct SMT_var* v1, struct SMT_var* v2)
 		if(v2->width!=1)
 		{
 			printf ("%s() sort mismatch\n", __FUNCTION__);
-			printf ("v1=%s type=%d width=%d\n", v1->id, v1->type, v1->width);
-			printf ("v2=%s type=%d width=%d\n", v2->id, v2->type, v2->width);
+			printf ("v1=%s type=%d width=%d\n", v1->id.c_str(), v1->type, v1->width);
+			printf ("v2=%s type=%d width=%d\n", v2->id.c_str(), v2->type, v2->width);
 			die("");
 		};
-		add_comment ("gen_EQ id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d", v1->id, v2->id, v1->SAT_var, v2->SAT_var);
+		add_comment ("gen_EQ id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d", v1->id.c_str(), v2->id.c_str(), v1->SAT_var, v2->SAT_var);
 		//current_indent++;
 		struct SMT_var *v=gen_NOT(gen_XOR(v1, v2));
 		//current_indent--;
@@ -1117,7 +1088,7 @@ struct SMT_var* gen_AND(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("gen_AND id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d", 
-		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
+		v1->id.c_str(), v2->id.c_str(), v1->SAT_var, v2->SAT_var, rt->id.c_str(), rt->SAT_var);
 	add_Tseitin_AND(v1->SAT_var, v2->SAT_var, rt->SAT_var);
 	return rt;
 };
@@ -1378,7 +1349,7 @@ struct SMT_var* gen_OR(struct SMT_var* v1, struct SMT_var* v2)
 {
 	struct SMT_var* rt=create_internal_variable("internal", TY_BOOL, 1);
 	add_comment ("gen_OR id1 (SMT) %s, id2 (SMT) %s, var1 (SAT) %d, var2 (SAT) %d, out id (SMT) %s, out var (SAT) %d",
-		v1->id, v2->id, v1->SAT_var, v2->SAT_var, rt->id, rt->SAT_var);
+		v1->id.c_str(), v2->id.c_str(), v1->SAT_var, v2->SAT_var, rt->id.c_str(), rt->SAT_var);
 
 	add_Tseitin_OR (v1->SAT_var, v2->SAT_var, rt->SAT_var);
 
@@ -1417,8 +1388,6 @@ struct SMT_var* gen_ITE(struct SMT_var* sel, struct SMT_var* t, struct SMT_var* 
 
 	add_Tseitin_ITE_BV (sel->SAT_var, t->SAT_var, f->SAT_var, rt->SAT_var, t->width);
 
-	//for (int i=0; i<t->width; i++)
-	//	add_Tseitin_ITE(sel->SAT_var, t->SAT_var+i, f->SAT_var+i, rt->SAT_var+i);
 	return rt;
 }
 
@@ -1572,7 +1541,7 @@ void create_assert (struct expr* e)
 	// otherwise, EQ will be gend and "grounded" to True,
 	// which can be inefficient, because EQ is NOT-OR-XOR
 	struct SMT_var* v=gen(e);
-	add_comment ("%s() id=%s var=%d", __FUNCTION__, v->id, v->SAT_var);
+	add_comment ("%s() id=%s var=%d", __FUNCTION__, v->id.c_str(), v->SAT_var);
 	add_clause1 (v->SAT_var); // v must be True
 };
 
@@ -1591,7 +1560,7 @@ void create_min_max (struct expr* e, bool min_max)
 	if (min_max==false)
 		v=gen_BVNEG(v);
 
-	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id, v->SAT_var);
+	add_comment ("%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id.c_str(), v->SAT_var);
 
 	// maximize always. if we need to minimize, $v$ is already negated at this point:
 	for (int i=0; i<v->width; i++)
@@ -1650,7 +1619,6 @@ uint32_t SAT_solution_to_value(int* a, int w)
 
 void fill_variables_from_SAT_solver_response(int *array)
 {
-	//for (struct SMT_var* v=vars; v; v=v->next)
 	for (auto v : vars)
 	{
 		// do not set internal variables, for faster results:

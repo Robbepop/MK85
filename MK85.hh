@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <stdint.h>
 
 /*
@@ -100,7 +102,7 @@ struct expr* create_repeat_expr(int times, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
 struct expr* create_ITE(struct expr* sel, struct expr* t, struct expr* f);
 
-struct SMT_var* create_variable(const char *name, enum TY type, int width, int internal);
+struct SMT_var* create_variable(std::string name, enum TY type, int width, int internal);
 void init();
 void create_assert (struct expr* e);
 void create_min_max (struct expr* e, bool min_max);
