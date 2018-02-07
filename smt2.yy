@@ -10,6 +10,8 @@
 #include "MK85.hh"
 #include "utils.hh"
 
+struct ctx* ctx;
+
 int yylex(void);
 void yyerror(const char *);
 
@@ -57,39 +59,39 @@ commandline: T_L_PAREN T_SET_LOGIC T_QF_BV T_R_PAREN
         | T_L_PAREN T_SET_INFO T_SMT_LIB_VERSION T_NUMBER T_DOT T_NUMBER T_R_PAREN
         | T_L_PAREN T_DECLARE_FUN T_ID T_L_PAREN T_R_PAREN T_BOOL T_R_PAREN
 	{
-		create_variable(std::string($3), TY_BOOL, 1, 0);
+		create_variable(ctx, std::string($3), TY_BOOL, 1, 0);
 	}
         | T_L_PAREN T_DECLARE_FUN T_ID T_L_PAREN T_R_PAREN T_L_PAREN T_UNDERSCORE T_BITVEC T_NUMBER T_R_PAREN T_R_PAREN
 	{
-		create_variable(std::string($3), TY_BITVEC, $9, 0);
+		create_variable(ctx, std::string($3), TY_BITVEC, $9, 0);
 	}
         | T_L_PAREN T_ASSERT expr T_R_PAREN
 	{
-		create_assert($3);
+		create_assert(ctx, $3);
 	}
         | T_L_PAREN T_MINIMIZE expr T_R_PAREN
 	{
-		create_min_max($3, false);
+		create_min_max(ctx, $3, false);
 	}
         | T_L_PAREN T_MAXIMIZE expr T_R_PAREN
 	{
-		create_min_max($3, true);
+		create_min_max(ctx, $3, true);
 	}
         | T_L_PAREN T_CHECK_SAT T_R_PAREN
 	{
-		check_sat();
+		check_sat(ctx);
 	}
         | T_L_PAREN T_GET_MODEL T_R_PAREN
 	{
-		get_model();
+		get_model(ctx);
 	}
         | T_L_PAREN T_GET_ALL_MODELS T_R_PAREN
 	{
-		get_all_models(true);
+		get_all_models(ctx, true);
 	}
         | T_L_PAREN T_COUNT_MODELS T_R_PAREN
 	{
-		get_all_models(false);
+		get_all_models(ctx, false);
 	}
         ;
 
@@ -199,15 +201,17 @@ void yyerror(const char *s)
 
 int main(int argc, char *argv[])
 {
+	ctx=init();
+
 	int i;
 	for (i=1; i<argc && argv[i][0]=='-'; i++)
 	{
 		// handle switches
 		// TODO stricmp
 		if (strcmp(argv[i], "--dump-internal-variables")==0)
-			dump_internal_variables=true;
+			ctx->dump_internal_variables=true;
 		if (strcmp(argv[i], "--write-CNF")==0)
-			write_CNF_file=true;
+			ctx->write_CNF_file=true;
 	};
 
 	if (i>=argc)
@@ -219,8 +223,6 @@ int main(int argc, char *argv[])
 		printf ("Cannot open input file\n");
 		return 0;
 	} 
-
-	init();
 
 	yyin = input;
 
