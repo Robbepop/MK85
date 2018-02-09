@@ -757,7 +757,7 @@ struct SMT_var* gen_BVUGE(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v
 };
 
 /*
-see also from http://smtlib.cs.uiowa.edu
+see also: http://smtlib.cs.uiowa.edu
 
    (bvslt s t) abbreviates:
       (or (and (= ((_ extract |m-1| |m-1|) s) #b1)
