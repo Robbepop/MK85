@@ -24,7 +24,7 @@ class clause
 public:
 	enum clause_type type;
 	std::string s; // if COMMENT
-	int weight; // if SOFT_CLAUSE
+	uint32_t weight; // if SOFT_CLAUSE
 	std::list<int> li; // if HARD_CLASUE/SOFT_CLAUSE
 };
 
@@ -56,7 +56,7 @@ struct ctx
 	int clauses_t;
 	std::list<class clause> clauses;
 
-	int max_weight;
+	uint32_t max_weight;
 	bool maxsat;
 
 	bool create_min_max_called;

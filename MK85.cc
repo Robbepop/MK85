@@ -391,7 +391,7 @@ struct SMT_var* create_internal_variable(struct ctx* ctx, const char* prefix, en
 	return create_variable(ctx, tmp, type, width, 1);
 };
 
-void add_soft_clause1(struct ctx* ctx, int weight, int v1)
+void add_soft_clause1(struct ctx* ctx, uint32_t weight, int v1)
 {
 	ctx->clauses_t++;
 
@@ -1514,14 +1514,14 @@ void create_min_max (struct ctx* ctx, struct expr* e, bool min_max)
 
 	// maximize always. if we need to minimize, $v$ is already negated at this point:
 	for (int i=0; i<v->width; i++)
-		add_soft_clause1(ctx, /* weight */ 1<<i, v->SAT_var+i);
+		add_soft_clause1(ctx, /* weight */ 1UL<<i, v->SAT_var+i);
 
 	ctx->create_min_max_called=true;
 };
 
 void write_CNF(struct ctx* ctx, const char *fname)
 {
-	int hard_clause_weight;
+	uint32_t hard_clause_weight;
 
 	if (ctx->maxsat)
 		hard_clause_weight=ctx->max_weight+1;
@@ -1529,7 +1529,7 @@ void write_CNF(struct ctx* ctx, const char *fname)
 	FILE* f=fopen (fname, "wt");
 	assert (f!=NULL);
 	if (ctx->maxsat)
-		fprintf (f, "p wcnf %d %d %d\n", ctx->SAT_next_var_no-1, ctx->clauses_t, hard_clause_weight);
+		fprintf (f, "p wcnf %d %d %u\n", ctx->SAT_next_var_no-1, ctx->clauses_t, hard_clause_weight);
 	else
 		fprintf (f, "p cnf %d %d\n", ctx->SAT_next_var_no-1, ctx->clauses_t);
 	for (auto c : ctx->clauses)
@@ -1538,13 +1538,13 @@ void write_CNF(struct ctx* ctx, const char *fname)
 		{
 			assert(ctx->maxsat);
 			std::string s=cxx_list_of_ints_to_string(c.li);
-			fprintf (f, "%d %s 0\n", c.weight, s.c_str());
+			fprintf (f, "%u %s 0\n", c.weight, s.c_str());
 		}
 		else if (c.type==HARD_CLASUE)
 		{
 			std::string s=cxx_list_of_ints_to_string(c.li);
 			if (ctx->maxsat)
-				fprintf (f, "%d %s 0\n", hard_clause_weight, s.c_str());
+				fprintf (f, "%u %s 0\n", hard_clause_weight, s.c_str());
 			else
 				fprintf (f, "%s 0\n", s.c_str());
 		}
