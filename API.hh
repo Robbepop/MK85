@@ -2,6 +2,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum TY
 {
 	TY_BOOL=0,
@@ -63,4 +67,13 @@ void set_next(struct expr* arg, struct expr* n);
 struct SMT_var* declare_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal);
 void create_assert (struct ctx* ctx, struct expr* e);
 void create_min_max (struct ctx* ctx, struct expr* e, bool min_max);
+
+// return type - bool
+int check_sat(struct ctx* ctx);
+
+uint32_t get_variable_val(struct ctx* ctx, char* id);
+
+#ifdef __cplusplus
+}
+#endif
 

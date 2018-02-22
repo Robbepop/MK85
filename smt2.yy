@@ -80,7 +80,10 @@ commandline: T_L_PAREN T_SET_LOGIC T_QF_BV T_R_PAREN
 	}
         | T_L_PAREN T_CHECK_SAT T_R_PAREN
 	{
-		check_sat(ctx);
+		if (check_sat(ctx)==0)
+			printf ("unsat\n");
+		else
+			printf ("sat\n");
 	}
         | T_L_PAREN T_GET_MODEL T_R_PAREN
 	{

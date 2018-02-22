@@ -362,6 +362,14 @@ struct SMT_var* find_variable(struct ctx* ctx, std::string id)
 	return NULL;
 };
 
+uint32_t get_variable_val(struct ctx* ctx, char* id)
+{
+	struct SMT_var* v=find_variable(ctx, std::string(id));
+	if (v==NULL)
+		die ("%s() can't find variable %s\n", __FUNCTION__, id);
+	return v->val;
+};
+
 struct SMT_var* declare_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal)
 {
 	if (type==TY_BOOL)
@@ -1723,7 +1731,7 @@ bool run_WBO_solver_and_get_solution(struct ctx* ctx)
 	return false; // make compiler happy
 };
 
-void check_sat(struct ctx* ctx)
+int check_sat(struct ctx* ctx)
 {
 	bool rt;
 
@@ -1732,16 +1740,8 @@ void check_sat(struct ctx* ctx)
 	else
 		rt=run_SAT_solver_and_get_solution(ctx);
 
-	if (rt)
-	{
-		ctx->sat=true;
-		printf ("sat\n");
-	}
-	else
-	{
-		ctx->sat=false;
-		printf ("unsat\n");
-	}
+	ctx->sat=rt;
+	return rt;
 };
 
 void get_model(struct ctx* ctx)

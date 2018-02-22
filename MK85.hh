@@ -35,7 +35,7 @@ struct SMT_var
 	int width; // in bits, 1 for bool
 	// TODO: uint64_t? bitmap?
 	uint32_t val; // what we've got from from SAT-solver's results. 0/1 for Bool
-	struct expr* e;
+	struct expr* e; // expression "connected" to the variable, can be printed for debugging purposes
 };
 
 struct ctx
@@ -101,7 +101,6 @@ struct expr
 	struct expr *next;
 };
 
-void check_sat(struct ctx* ctx);
 void get_model(struct ctx* ctx);
 void get_all_models(struct ctx* ctx, bool dump_variables);
 
