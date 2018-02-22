@@ -3,6 +3,7 @@
 // xkcd #287 https://yurichev.com/blog/xkcd287/
 
 // I doubt anyone would use C API, but I do this to make a bridge to Python API
+// see also: https://github.com/DennisYurichev/MK85/blob/master/API.h
 
 #include <stdio.h>
 #include <assert.h>
@@ -80,6 +81,12 @@ int main()
 	};
 };
 /*
+Compilation:
+	gcc API_example1.c -o API_example1 libMK85.so 
+
+Run:
+	export LD_LIBRARY_PATH=.
+	
 Sample output:
 
 declare_variable(name=a, type=1, width=16, internal=0)
