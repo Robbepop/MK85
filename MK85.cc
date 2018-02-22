@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <unistd.h>
 
+#include "API.hh"
 #include "MK85.hh"
 #include "utils.hh"
 
@@ -45,6 +46,15 @@ void add_Tseitin_ITE_BV (struct ctx* ctx, int s, int t, int f, int x, int width)
 void assure_TY_BOOL(const char* func, struct SMT_var* v);
 void assure_TY_BITVEC(const char* func, struct SMT_var* v);
 void assure_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2);
+
+struct expr* create_id(char* id)
+{
+	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
+	rt->type=EXPR_ID;
+	rt->id=id;
+	rt->next=NULL;
+	return rt;
+};
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
@@ -131,7 +141,7 @@ struct expr* create_distinct_expr(struct expr* args)
 
 	// be sure at least two expr in chain:
 	if (args->next==NULL)
-		die("line %d: 'distinct' requires 2 or more arguments!\n", yylineno);
+		die("line %d: 'distinct' requires at least 2 arguments!\n", yylineno);
 	
 	if (args->next->next==NULL)
 		// only two expr in chain:
@@ -352,7 +362,7 @@ struct SMT_var* find_variable(struct ctx* ctx, std::string id)
 	return NULL;
 };
 
-struct SMT_var* create_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal)
+struct SMT_var* declare_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal)
 {
 	if (type==TY_BOOL)
 		assert(width==1);
@@ -388,7 +398,7 @@ struct SMT_var* create_internal_variable(struct ctx* ctx, const char* prefix, en
 	char tmp[128];
 	snprintf (tmp, sizeof(tmp), "%s!%d", prefix, ctx->next_internal_var);
 	ctx->next_internal_var++;
-	return create_variable(ctx, tmp, type, width, 1);
+	return declare_variable(ctx, tmp, type, width, 1);
 };
 
 void add_soft_clause1(struct ctx* ctx, uint32_t weight, int v1)
@@ -1805,7 +1815,7 @@ void get_all_models(struct ctx* ctx, bool dump_variables)
 	picosat_get_all_models(ctx, dump_variables);
 };
 
-struct ctx* init()
+struct ctx* MK85_init()
 {
 	struct ctx* ctx=new (struct ctx);
 
@@ -1819,13 +1829,18 @@ struct ctx* init()
 	ctx->create_min_max_called=false;
 	ctx->sat=false;
 
-	ctx->var_always_false=create_variable(ctx, "always_false", TY_BOOL, 1, true);
+	ctx->var_always_false=declare_variable(ctx, "always_false", TY_BOOL, 1, true);
 	add_comment (ctx, "always false");
 	add_clause1(ctx, -ctx->var_always_false->SAT_var);
 	add_comment (ctx, "always true");
-	ctx->var_always_true=create_variable(ctx, "always_true", TY_BOOL, 1, true);
+	ctx->var_always_true=declare_variable(ctx, "always_true", TY_BOOL, 1, true);
 	add_clause1(ctx, ctx->var_always_true->SAT_var);
 
 	return ctx;
+};
+
+void set_next(struct expr* arg, struct expr* n)
+{
+	arg->next=n;
 };
 

@@ -1,3 +1,5 @@
+// not visible to API users
+
 #pragma once
 
 #include <string>
@@ -5,11 +7,7 @@
 
 #include <stdint.h>
 
-enum TY
-{
-	TY_BOOL=0,
-	TY_BITVEC=1
-};
+#include "API.hh"
 
 enum clause_type
 {
@@ -65,42 +63,6 @@ struct ctx
 	int* solution;
 };
 
-enum OP
-{
-	OP_NOT,
-	OP_BVSHL,
-	OP_BVLSHR,
-	OP_BVASHR,
-	OP_BVSHL1,
-	OP_BVSHR1,
-	OP_EQ,
-	OP_NEQ,
-	OP_AND,
-	OP_OR,
-	OP_XOR,
-	OP_BVNOT,
-	OP_BVNEG,
-	OP_BVXOR,
-	OP_BVADD,
-	OP_BVAND,
-	OP_BVOR,
-	OP_BVMUL,
-	OP_BVMUL_NO_OVERFLOW,
-	OP_BVSUB,
-	OP_BVUGE,
-	OP_BVUGT,
-	OP_BVULE,
-	OP_BVULT,
-	OP_BVSGE,
-	OP_BVSGT,
-	OP_BVSLE,
-	OP_BVSLT,
-	OP_BVSUBGE,
-	OP_BVUDIV,
-	OP_BVUREM,
-	OP_ITE
-};
-
 // idea: make zero_extend, repeat, extract as functions!
 // but I can't...
 enum EXPR_TYPE
@@ -139,21 +101,6 @@ struct expr
 	struct expr *next;
 };
 
-struct expr* create_unary_expr(enum OP t, struct expr* op);
-struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2);
-struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, struct expr* op3);
-struct expr* create_vararg_expr(enum OP t, struct expr* args);
-struct expr* create_distinct_expr(struct expr* args);
-struct expr* create_const_expr(uint32_t c, int w);
-struct expr* create_zero_extend_expr(int bits, struct expr* e);
-struct expr* create_repeat_expr(int times, struct expr* e);
-struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
-struct expr* create_ITE(struct expr* sel, struct expr* t, struct expr* f);
-
-struct SMT_var* create_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal);
-struct ctx* init();
-void create_assert (struct ctx* ctx, struct expr* e);
-void create_min_max (struct ctx* ctx, struct expr* e, bool min_max);
 void check_sat(struct ctx* ctx);
 void get_model(struct ctx* ctx);
 void get_all_models(struct ctx* ctx, bool dump_variables);

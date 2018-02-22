@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "API.hh"
 #include "MK85.hh"
 #include "utils.hh"
 
@@ -59,11 +60,11 @@ commandline: T_L_PAREN T_SET_LOGIC T_QF_BV T_R_PAREN
         | T_L_PAREN T_SET_INFO T_SMT_LIB_VERSION T_NUMBER T_DOT T_NUMBER T_R_PAREN
         | T_L_PAREN T_DECLARE_FUN T_ID T_L_PAREN T_R_PAREN T_BOOL T_R_PAREN
 	{
-		create_variable(ctx, std::string($3), TY_BOOL, 1, 0);
+		declare_variable(ctx, std::string($3), TY_BOOL, 1, 0);
 	}
         | T_L_PAREN T_DECLARE_FUN T_ID T_L_PAREN T_R_PAREN T_L_PAREN T_UNDERSCORE T_BITVEC T_NUMBER T_R_PAREN T_R_PAREN
 	{
-		create_variable(ctx, std::string($3), TY_BITVEC, $9, 0);
+		declare_variable(ctx, std::string($3), TY_BITVEC, $9, 0);
 	}
         | T_L_PAREN T_ASSERT expr T_R_PAREN
 	{
@@ -145,10 +146,7 @@ expr_list:	expr
 
 expr:	T_ID
 	{
-		$$=(struct expr*)xmalloc(sizeof(struct expr));
-		$$->type=EXPR_ID;
-		$$->id=$1;
-		$$->next=NULL;
+		$$=create_id($1);
 	}
 	| T_CONST
         | T_L_PAREN T_UNDERSCORE T_BV_DEC_CONST T_NUMBER T_R_PAREN
@@ -201,7 +199,7 @@ void yyerror(const char *s)
 
 int main(int argc, char *argv[])
 {
-	ctx=init();
+	ctx=MK85_init();
 
 	int i;
 	for (i=1; i<argc && argv[i][0]=='-'; i++)
