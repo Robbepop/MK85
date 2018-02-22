@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "API.hh"
+#include "API.h"
 
 enum clause_type
 {

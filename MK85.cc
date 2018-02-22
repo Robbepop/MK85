@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <unistd.h>
 
-#include "API.hh"
+#include "API.h"
 #include "MK85.hh"
 #include "utils.hh"
 
@@ -24,6 +24,9 @@ extern "C"
 
 // from smt2.y:
 extern int yylineno;
+
+// TODO add command-line switch
+int verbose;
 
 // fwd decl:
 struct SMT_var* gen_AND(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2);
@@ -46,6 +49,11 @@ void add_Tseitin_ITE_BV (struct ctx* ctx, int s, int t, int f, int x, int width)
 void assure_TY_BOOL(const char* func, struct SMT_var* v);
 void assure_TY_BITVEC(const char* func, struct SMT_var* v);
 void assure_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2);
+
+void set_verbose(int level)
+{
+	verbose=level;
+};
 
 struct expr* create_id(char* id)
 {
@@ -370,17 +378,22 @@ uint32_t get_variable_val(struct ctx* ctx, char* id)
 	return v->val;
 };
 
-struct SMT_var* declare_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal)
+struct SMT_var* declare_variable(struct ctx* ctx, char* name, enum TY type, int width, int internal)
 {
+	if (verbose && internal==0)
+	{
+		printf ("%s(name=%s, type=%d, width=%d, internal=%d)\n", __FUNCTION__, name, type, width, internal);
+	};
+
 	if (type==TY_BOOL)
 		assert(width==1);
 
-	if (find_variable(ctx, name)!=NULL)
-		die ("Fatal error: variable %s is already defined\n", name.c_str());
+	if (find_variable(ctx, std::string(name))!=NULL)
+		die ("Fatal error: variable %s is already defined\n", name);
 
 	struct SMT_var *v=new(struct SMT_var);
 	v->type=type;
-	v->id=name;
+	v->id=std::string(name);
 	if (type==TY_BOOL)
 	{
 		v->SAT_var=ctx->SAT_next_var_no;
@@ -1485,11 +1498,12 @@ struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 
 void create_assert (struct ctx* ctx, struct expr* e)
 {
-/*
-	printf ("%s() ", __FUNCTION__);
-	print_expr(e);
-	printf ("\n");
-*/
+	if (verbose)
+	{
+		printf ("%s() ", __FUNCTION__);
+		print_expr(e);
+		printf ("\n");
+	};
 
 	// small optimization, however, can't get serious boost...
 	// if expression has form (assert (= x y)), use add_Tseitin_EQ_bitvecs here
@@ -1515,7 +1529,7 @@ void create_assert (struct ctx* ctx, struct expr* e)
 	add_clause1 (ctx, v->SAT_var); // "ground" v to True
 };
 
-void create_min_max (struct ctx* ctx, struct expr* e, bool min_max)
+void create_min_max (struct ctx* ctx, struct expr* e, int min_max)
 {
 	if (ctx->create_min_max_called)
 		die ("Due to limitations of MK85, only one minimize/maximize command is allowed\n");
@@ -1525,7 +1539,7 @@ void create_min_max (struct ctx* ctx, struct expr* e, bool min_max)
 	assure_TY_BITVEC(__FUNCTION__, v);
 
 	// if "minimize", negate input value:
-	if (min_max==false)
+	if (min_max==0)
 		v=gen_BVNEG(ctx, v);
 
 	add_comment (ctx, "%s(min_max=%d) id=%s var=%d", __FUNCTION__, min_max, v->id.c_str(), v->SAT_var);
@@ -1829,18 +1843,19 @@ struct ctx* MK85_init()
 	ctx->create_min_max_called=false;
 	ctx->sat=false;
 
-	ctx->var_always_false=declare_variable(ctx, "always_false", TY_BOOL, 1, true);
+	ctx->var_always_false=declare_variable(ctx, "always_false", TY_BOOL, 1, 1);
 	add_comment (ctx, "always false");
 	add_clause1(ctx, -ctx->var_always_false->SAT_var);
 	add_comment (ctx, "always true");
-	ctx->var_always_true=declare_variable(ctx, "always_true", TY_BOOL, 1, true);
+	ctx->var_always_true=declare_variable(ctx, "always_true", TY_BOOL, 1, 1);
 	add_clause1(ctx, ctx->var_always_true->SAT_var);
 
 	return ctx;
 };
 
-void set_next(struct expr* arg, struct expr* n)
+struct expr* set_next(struct expr* arg, struct expr* n)
 {
 	arg->next=n;
+	return n;
 };
 

@@ -1,7 +1,7 @@
 COPT=-Wall -g -c -O3 -std=c++11 -fPIC
 #COPT=-Wall -g -pg -c -std=c++11
 
-all: MK85 libMK85.so
+all: MK85 libMK85.so API_example1
 
 MK85: lex.yy.o y.tab.o MK85.o utils.o picosat.o
 	#g++ MK85.o y.tab.o lex.yy.o utils.o -L/usr/local/lib/ -g -pg -o MK85
@@ -32,6 +32,9 @@ y.tab.o: y.tab.c y.tab.h
 
 MK85.o: MK85.cc
 	g++ $(COPT) MK85.cc
+
+API_example1: API_example1.c
+	gcc API_example1.c -o API_example1 libMK85.so 
 
 clean:
 	rm *.o

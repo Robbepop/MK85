@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +50,7 @@ enum OP
 	OP_ITE=31
 };
 
+void set_verbose(int level);
 struct ctx* MK85_init();
 struct expr* create_id(char* id);
 struct expr* create_unary_expr(enum OP t, struct expr* op);
@@ -62,11 +65,11 @@ struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
 
 // DIRTY HACK!
 // rationale: encapsulate "struct expr" details from API users
-void set_next(struct expr* arg, struct expr* n);
+struct expr* set_next(struct expr* arg, struct expr* n);
 
-struct SMT_var* declare_variable(struct ctx* ctx, std::string name, enum TY type, int width, int internal);
+struct SMT_var* declare_variable(struct ctx* ctx, char* name, enum TY type, int width, int internal);
 void create_assert (struct ctx* ctx, struct expr* e);
-void create_min_max (struct ctx* ctx, struct expr* e, bool min_max);
+void create_min_max (struct ctx* ctx, struct expr* e, int min_max);
 
 // return type - bool
 int check_sat(struct ctx* ctx);
