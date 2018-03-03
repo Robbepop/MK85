@@ -1686,7 +1686,10 @@ bool run_picosat_and_get_solution(struct ctx* ctx)
 	add_clauses_to_picosat(ctx, p);
 
 	if (ctx->write_CNF_file)
+	{
 		write_CNF(ctx, "tmp.cnf");
+		printf ("CNF file written to tmp.cnf\n");
+	};
 
 	int res=picosat_sat (p,-1);
 	if (res==20)
