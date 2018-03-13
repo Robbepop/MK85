@@ -1787,6 +1787,8 @@ void minisat_get_all_models(struct ctx* ctx, bool dump_variables)
 	while (run_minisat_and_get_solution(ctx))
 	{
 		total++;
+		if (verbose>0 && (total&0xff)==0)
+			printf ("(Heartbeat) %d models already\n", total);
 		if (dump_variables)
 			dump_all_variables(ctx, ctx->dump_internal_variables);
 		negate_solution_and_add_as_constraint(ctx, ctx->solution);
@@ -1808,6 +1810,8 @@ void picosat_get_all_models(struct ctx* ctx, bool dump_variables)
 	while ((res=picosat_sat(p,-1))==10)
 	{
 		total++;
+		if (verbose>0 && (total&0xff)==0)
+			printf ("(Heartbeat) %d models already\n", total);
 		int *solution=fill_variables_from_picosat(ctx, p);
 		if (dump_variables)
 			dump_all_variables(ctx, ctx->dump_internal_variables);
