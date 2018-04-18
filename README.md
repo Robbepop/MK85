@@ -25,6 +25,8 @@ First, you can check your .smt files using other SMT solver (I used z3, Boolecto
 
 [Armin Biere](http://fmv.jku.at/biere/) patiently helped with my endless boring-to-death questions.
 
+Xenia Galinskaya, for support.
+
 ## Non-standard SMT-LIB commands
 
 Aside from SMT-LIB standard, I also added two more commands: (get-all-models) and (count-models) (see "tests").
