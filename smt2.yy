@@ -149,7 +149,7 @@ expr_list:	expr
 
 expr:	T_ID
 	{
-		$$=create_id($1);
+		$$=create_id(ctx, $1);
 	}
 	| T_CONST
         | T_L_PAREN T_UNDERSCORE T_BV_DEC_CONST T_NUMBER T_R_PAREN
@@ -213,6 +213,10 @@ int main(int argc, char *argv[])
 			ctx->dump_internal_variables=true;
 		if (strcmp(argv[i], "--write-CNF")==0)
 			ctx->write_CNF_file=true;
+		if (strcmp(argv[i], "--vv")==0)
+			set_verbose(2);
+		if (strcmp(argv[i], "--v")==0)
+			set_verbose(1);
 	};
 
 	if (i>=argc)

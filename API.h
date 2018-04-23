@@ -52,7 +52,7 @@ enum OP
 
 void set_verbose(int level);
 struct ctx* MK85_init();
-struct expr* create_id(char* id);
+struct expr* create_id(struct ctx* ctx, char* id);
 struct expr* create_unary_expr(enum OP t, struct expr* op);
 struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2);
 struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, struct expr* op3);
@@ -62,12 +62,14 @@ struct expr* create_const_expr(uint32_t c, int w);
 struct expr* create_zero_extend_expr(int bits, struct expr* e);
 struct expr* create_repeat_expr(int times, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
+enum TY get_type_of_expr(struct expr*);
+int get_width_of_expr(struct expr*);
 
 // DIRTY HACK!
 // rationale: encapsulate "struct expr" details from API users
 struct expr* set_next(struct expr* arg, struct expr* n);
 
-struct SMT_var* declare_variable(struct ctx* ctx, char* name, enum TY type, int width, int internal);
+struct SMT_var* declare_variable(struct ctx* ctx, const char* name, enum TY type, int width, int internal);
 void create_assert (struct ctx* ctx, struct expr* e);
 void create_min_max (struct ctx* ctx, struct expr* e, int min_max);
 

@@ -29,6 +29,7 @@ extern int yylineno;
 int verbose;
 
 // fwd decl:
+struct SMT_var* find_variable(struct ctx* ctx, std::string id);
 struct SMT_var* gen(struct ctx* ctx, struct expr* e);
 struct SMT_var* gen_AND(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2);
 struct SMT_var* gen_EQ(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2);
@@ -56,10 +57,21 @@ void set_verbose(int level)
 	verbose=level;
 };
 
-struct expr* create_id(char* id)
+struct expr* create_id(struct ctx* ctx, char* id)
 {
+	if (verbose>=2)
+	{
+		printf ("%s(%s)\n", __FUNCTION__, id);
+	};
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->node_type=EXPR_ID;
+
+	struct SMT_var* v=find_variable(ctx, std::string(id));
+	if(v==NULL)
+		die ("line %d: variable %s hasn't been declared\n", yylineno, id);
+	rt->type=v->type;
+	rt->width=v->width;
+
 	rt->id=id;
 	rt->next=NULL;
 	return rt;
@@ -67,9 +79,18 @@ struct expr* create_id(char* id)
 
 struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
+	if (verbose>=2)
+	{
+		printf ("%s()\n", __FUNCTION__);
+		printf ("op=");
+		print_expr(op);
+		printf ("\n");
+	};
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
 	rt->node_type=EXPR_UNARY;
+	rt->type=op->type;
+	rt->width=op->width;
 	rt->op=t;
 	rt->op1=op;
 	return rt;
@@ -77,18 +98,37 @@ struct expr* create_unary_expr(enum OP t, struct expr* op)
 
 struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2)
 {
-/*
-	printf ("%s()\n", __FUNCTION__);
-	printf ("op1=");
-	print_expr(op1);
-	printf ("\n");
-	printf ("op2=");
-	print_expr(op2);
-	printf ("\n");
-*/
+	if (verbose>=2)
+	{
+		printf ("%s()\n", __FUNCTION__);
+		printf ("op1=");
+		print_expr(op1);
+		printf ("\n");
+		printf ("op2=");
+		print_expr(op2);
+		printf ("\n");
+	};
+
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
 	rt->node_type=EXPR_BINARY;
+	if (t==OP_EQ || t==OP_NEQ)
+	{
+		rt->type=TY_BOOL;
+		rt->width=1;
+	}
+	else
+	{
+		assert (op1->type==op2->type);
+		assert (op1->width==op2->width);
+		rt->type=op1->type;
+		rt->width=op1->width;
+	};
+
+	if (verbose>=2)
+	{
+		printf ("%s(), rt->type=%d rt->width=%d\n", __FUNCTION__, rt->type, rt->width);
+	};
 	rt->op=t;
 	rt->op1=op1;
 	rt->op2=op2;
@@ -97,17 +137,29 @@ struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2)
 
 struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, struct expr* op3)
 {
-/*
-	printf ("%s()\n", __FUNCTION__);
-	printf ("op1=");
-	print_expr(op1);
-	printf ("\n");
-	printf ("op2=");
-	print_expr(op2);
-	printf ("\n");
-*/
+	if (verbose>=2)
+	{
+		printf ("%s()\n", __FUNCTION__);
+		printf ("op1=");
+		print_expr(op1);
+		printf ("\n");
+		printf ("op2=");
+		print_expr(op2);
+		printf ("\n");
+		printf ("op3=");
+		print_expr(op3);
+		printf ("\n");
+	};
+
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->node_type=EXPR_TERNARY;
+	//print_expr(op1); printf ("\n");
+	//printf ("%d\n", op1->width==1);
+	assert (op1->width==1);
+	assert (op2->type==op3->type);
+	assert (op2->width==op3->width);
+	rt->type=op2->type;
+	rt->width=op2->width;
 	rt->op=t;
 	rt->op1=op1;
 	rt->op2=op2;
@@ -118,14 +170,15 @@ struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, 
 // FIXME use STL here!
 struct expr* create_vararg_expr(enum OP t, struct expr* args)
 {
-/*
-	printf ("%s(). input=\n", __FUNCTION__);
-	for (struct expr* e=args; e; e=e->next)
+	if (verbose>=2)
 	{
-		print_expr(e);
-		printf ("\n");
+		printf ("%s(). input=\n", __FUNCTION__);
+		for (struct expr* e=args; e; e=e->next)
+		{
+			print_expr(e);
+			printf ("\n");
+		};
 	};
-*/
 
 	// this provides left associativity.
 
@@ -185,7 +238,8 @@ struct expr* create_const_expr(uint32_t c, int w)
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->node_type=EXPR_CONST;
 	rt->const_val=c;
-	rt->const_width=w;
+	rt->type=TY_BITVEC;
+	rt->width=w;
 	return rt;
 };
 
@@ -195,6 +249,8 @@ struct expr* create_zero_extend_expr(int bits, struct expr* e)
 	rt->node_type=EXPR_ZERO_EXTEND;
 	rt->const_val=bits;
 	rt->op1=e;
+	rt->type=TY_BITVEC;
+	rt->width=e->width + bits; // unchecked
 	return rt;
 };
 
@@ -204,6 +260,8 @@ struct expr* create_repeat_expr(int times, struct expr* e)
 	rt->node_type=EXPR_REPEAT;
 	rt->const_val=times;
 	rt->op1=e;
+	rt->type=TY_BITVEC;
+	rt->width=times * e->width; // unchecked
 	return rt;
 };
 
@@ -218,7 +276,8 @@ struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e)
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->node_type=EXPR_EXTRACT;
 	rt->const_val=start;
-	rt->const_width=w;
+	rt->type=TY_BITVEC;
+	rt->width=w;
 	rt->op1=e;
 	return rt;
 };
@@ -271,7 +330,7 @@ void print_expr(struct expr* e)
 			return;
 
 		case EXPR_CONST:
-			printf ("%d (%d bits)", e->const_val, e->const_width);
+			printf ("%d (%d bits)", e->const_val, e->width);
 			return;
 
 		case EXPR_ZERO_EXTEND:
@@ -285,7 +344,7 @@ void print_expr(struct expr* e)
 			printf (")");
 			return;
 		case EXPR_EXTRACT:
-			printf ("(extract, start=%d width=%d bits: ", e->const_val, e->const_width);
+			printf ("(extract, start=%d width=%d bits: ", e->const_val, e->width);
 			print_expr(e->op1);
 			printf (")");
 			return;
@@ -369,7 +428,7 @@ uint32_t get_variable_val(struct ctx* ctx, char* id)
 	return v->val;
 };
 
-struct SMT_var* declare_variable(struct ctx* ctx, char* name, enum TY type, int width, int internal)
+struct SMT_var* declare_variable(struct ctx* ctx, const char* name, enum TY type, int width, int internal)
 {
 	if (verbose && internal==0)
 	{
@@ -1012,7 +1071,9 @@ struct SMT_var* gen_OR_list(struct ctx* ctx, int var, int width)
 
 struct SMT_var* gen_EQ(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2)
 {
-	//printf ("%s() v1=%d v2=%d\n", __FUNCTION__, v1->var_no, v2->var_no);
+	if (verbose>=2)
+		printf ("%s() v1->SAT_var=%d v2->SAT_var=%d\n", __FUNCTION__, v1->SAT_var, v2->SAT_var);
+
 	if (v1->width==1)
 	{
 		if(v2->width!=1)
@@ -1026,7 +1087,8 @@ struct SMT_var* gen_EQ(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2)
 		//current_indent++;
 		struct SMT_var *v=gen_NOT(ctx, gen_XOR(ctx, v1, v2));
 		//current_indent--;
-		//printf ("%s() returns %s (Bool)\n", __FUNCTION__, v->id);
+		if (verbose>=2)
+			printf ("%s() returns %s (Bool)\n", __FUNCTION__, v->id.c_str());
 		return v;
 	}
 	else
@@ -1039,7 +1101,8 @@ struct SMT_var* gen_EQ(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2)
 			v2->SAT_var, v2->SAT_var+v2->width-1);
 		struct SMT_var* t=gen_BVXOR(ctx, v1,v2);
 		struct SMT_var* v=gen_NOT(ctx, gen_OR_list(ctx, t->SAT_var, t->width));
-		//printf ("%s() returns %s (bitvec %d)\n", __FUNCTION__, v->id, v->width);
+		if (verbose>=2)
+			printf ("%s() returns %s (bitvec %d)\n", __FUNCTION__, v->id.c_str(), v->width);
 		return v;
 	};
 };
@@ -1428,7 +1491,7 @@ struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 			return rt;
 
 		case EXPR_CONST:
-			rt=gen_const(ctx, e->const_val, e->const_width);
+			rt=gen_const(ctx, e->const_val, e->width);
 			rt->e=e;
 			return rt;
 	
@@ -1443,7 +1506,7 @@ struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 			return rt;
 
 		case EXPR_EXTRACT:
-			rt=gen_extract(ctx, gen(ctx, e->op1), e->const_val, e->const_width);
+			rt=gen_extract(ctx, gen(ctx, e->op1), e->const_val, e->width);
 			rt->e=e;
 			return rt;
 
@@ -1843,5 +1906,15 @@ struct expr* set_next(struct expr* arg, struct expr* n)
 {
 	arg->next=n;
 	return n;
+};
+
+enum TY get_type_of_expr(struct expr* e)
+{
+	return e->type;
+};
+
+int get_width_of_expr(struct expr* e)
+{
+	return e->width;
 };
 

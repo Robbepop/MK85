@@ -79,7 +79,9 @@ enum EXPR_TYPE
 
 struct expr
 {
-	enum EXPR_TYPE node_type; // rename to node_type?
+	enum EXPR_TYPE node_type;
+	enum TY type;
+	int width; // in bits, 1 for bool
 
 	// in case of EXPR_ID
 	char* id;
@@ -95,7 +97,6 @@ struct expr
 	// in case of EXPR_CONST
 	//uint64_t const_val;
 	uint32_t const_val;
-	int const_width; // in bits
 
 	// in case of chained expressions:
 	struct expr *next;
