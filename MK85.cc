@@ -29,6 +29,7 @@ extern int yylineno;
 int verbose;
 
 // fwd decl:
+struct SMT_var* gen(struct ctx* ctx, struct expr* e);
 struct SMT_var* gen_AND(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2);
 struct SMT_var* gen_EQ(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* v2);
 struct SMT_var* gen_ITE(struct ctx* ctx, struct SMT_var* sel, struct SMT_var* t, struct SMT_var* f);
@@ -58,7 +59,7 @@ void set_verbose(int level)
 struct expr* create_id(char* id)
 {
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
-	rt->type=EXPR_ID;
+	rt->node_type=EXPR_ID;
 	rt->id=id;
 	rt->next=NULL;
 	return rt;
@@ -68,7 +69,7 @@ struct expr* create_unary_expr(enum OP t, struct expr* op)
 {
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
-	rt->type=EXPR_UNARY;
+	rt->node_type=EXPR_UNARY;
 	rt->op=t;
 	rt->op1=op;
 	return rt;
@@ -87,7 +88,7 @@ struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2)
 */
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
-	rt->type=EXPR_BINARY;
+	rt->node_type=EXPR_BINARY;
 	rt->op=t;
 	rt->op1=op1;
 	rt->op2=op2;
@@ -106,7 +107,7 @@ struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, 
 	printf ("\n");
 */
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
-	rt->type=EXPR_TERNARY;
+	rt->node_type=EXPR_TERNARY;
 	rt->op=t;
 	rt->op1=op1;
 	rt->op2=op2;
@@ -182,7 +183,7 @@ struct expr* create_const_expr(uint32_t c, int w)
 {
 	//printf ("%s(%d, %d)\n", __FUNCTION__, c, w);
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
-	rt->type=EXPR_CONST;
+	rt->node_type=EXPR_CONST;
 	rt->const_val=c;
 	rt->const_width=w;
 	return rt;
@@ -191,7 +192,7 @@ struct expr* create_const_expr(uint32_t c, int w)
 struct expr* create_zero_extend_expr(int bits, struct expr* e)
 {
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
-	rt->type=EXPR_ZERO_EXTEND;
+	rt->node_type=EXPR_ZERO_EXTEND;
 	rt->const_val=bits;
 	rt->op1=e;
 	return rt;
@@ -200,7 +201,7 @@ struct expr* create_zero_extend_expr(int bits, struct expr* e)
 struct expr* create_repeat_expr(int times, struct expr* e)
 {
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
-	rt->type=EXPR_REPEAT;
+	rt->node_type=EXPR_REPEAT;
 	rt->const_val=times;
 	rt->op1=e;
 	return rt;
@@ -215,7 +216,7 @@ struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e)
 	unsigned w=end-start+1;
 
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
-	rt->type=EXPR_EXTRACT;
+	rt->node_type=EXPR_EXTRACT;
 	rt->const_val=start;
 	rt->const_width=w;
 	rt->op1=e;
@@ -263,65 +264,55 @@ void print_expr(struct expr* e)
 {
 	assert(e);
 
-	if (e->type==EXPR_ID)
+	switch (e->node_type)
 	{
-		printf ("%s", e->id);
-		return;
-	};
-	if (e->type==EXPR_CONST)
-	{
-		printf ("%d (%d bits)", e->const_val, e->const_width);
-		return;
-	};
-	if (e->type==EXPR_ZERO_EXTEND)
-	{
-		printf ("(ZEXT by %d bits: ", e->const_val);
-		print_expr(e->op1);
-		printf (")");
-		return;
-	};
-	if (e->type==EXPR_REPEAT)
-	{
-		printf ("(repeat %d times: ", e->const_val);
-		print_expr(e->op1);
-		printf (")");
-		return;
-	};
-	if (e->type==EXPR_EXTRACT)
-	{
-		printf ("(extract, start=%d width=%d bits: ", e->const_val, e->const_width);
-		print_expr(e->op1);
-		printf (")");
-		return;
-	};
-	if (e->type==EXPR_UNARY)
-	{
-		printf ("(%s ", op_name(e->op));
-		print_expr(e->op1);
-		printf (")");
-		return;
-	};
-	if (e->type==EXPR_BINARY)
-	{
-		printf ("(%s ", op_name(e->op));
-		print_expr(e->op1);
-		printf (" ");
-		print_expr(e->op2);
-		printf (")");
-		return;
-	};
-	if (e->type==EXPR_TERNARY)
-	{
-		printf ("(%s ", op_name(e->op));
-		print_expr(e->op1);
-		printf (" ");
-		print_expr(e->op2);
-		printf (" ");
-		print_expr(e->op3);
-		printf (")");
-		return;
-	};
-	assert (0);
+		case EXPR_ID:
+			printf ("%s", e->id);
+			return;
+
+		case EXPR_CONST:
+			printf ("%d (%d bits)", e->const_val, e->const_width);
+			return;
+
+		case EXPR_ZERO_EXTEND:
+			printf ("(ZEXT by %d bits: ", e->const_val);
+			print_expr(e->op1);
+			printf (")");
+			return;
+		case EXPR_REPEAT:
+			printf ("(repeat %d times: ", e->const_val);
+			print_expr(e->op1);
+			printf (")");
+			return;
+		case EXPR_EXTRACT:
+			printf ("(extract, start=%d width=%d bits: ", e->const_val, e->const_width);
+			print_expr(e->op1);
+			printf (")");
+			return;
+		case EXPR_UNARY:
+			printf ("(%s ", op_name(e->op));
+			print_expr(e->op1);
+			printf (")");
+			return;
+		case EXPR_BINARY:
+			printf ("(%s ", op_name(e->op));
+			print_expr(e->op1);
+			printf (" ");
+			print_expr(e->op2);
+			printf (")");
+			return;
+		case EXPR_TERNARY:
+			printf ("(%s ", op_name(e->op));
+			print_expr(e->op1);
+			printf (" ");
+			print_expr(e->op2);
+			printf (" ");
+			print_expr(e->op3);
+			printf (")");
+			return;
+		default:
+			assert (0);
+	}
 };
 
 const char* false_true_s[2]={"false", "true"};
@@ -1374,126 +1365,114 @@ struct SMT_var* gen_ITE(struct ctx* ctx, struct SMT_var* sel, struct SMT_var* t,
 	return rt;
 }
 
+struct SMT_var* gen_binary (struct ctx* ctx, struct expr* e)
+{
+	assert (e->node_type==EXPR_BINARY);
+	struct SMT_var* rt;
+
+	struct SMT_var* v1=gen(ctx, e->op1);
+	struct SMT_var* v2=gen(ctx, e->op2);
+	switch (e->op)
+	{
+		case OP_EQ:		rt=gen_EQ (ctx, v1, v2); break;
+		case OP_NEQ:		rt=gen_NEQ (ctx, v1, v2); break;
+		case OP_OR:		rt=gen_OR (ctx, v1, v2); break;
+		case OP_XOR:		rt=gen_XOR (ctx, v1, v2); break;
+		case OP_AND:		rt=gen_AND (ctx, v1, v2); break;
+		case OP_BVOR:		rt=gen_BVOR (ctx, v1, v2); break;
+		case OP_BVXOR:		rt=gen_BVXOR (ctx, v1, v2); break;
+		case OP_BVAND:		rt=gen_BVAND (ctx, v1, v2); break;
+		case OP_BVADD:		rt=gen_BVADD (ctx, v1, v2); break;
+		case OP_BVSUB:		rt=gen_BVSUB (ctx, v1, v2); break;
+		case OP_BVMUL:		rt=gen_BVMUL (ctx, v1, v2, 0); break;
+		case OP_BVMUL_NO_OVERFLOW:	rt=gen_BVMUL (ctx, v1, v2, 1); break;
+		case OP_BVUGE:		rt=gen_BVUGE (ctx, v1, v2); break;
+		case OP_BVULE:		rt=gen_BVULE (ctx, v1, v2); break;
+		case OP_BVUGT:		rt=gen_BVUGT (ctx, v1, v2); break;
+		case OP_BVULT:		rt=gen_BVULT (ctx, v1, v2); break;
+		case OP_BVSGE:		rt=gen_BVSGE (ctx, v1, v2); break;
+		case OP_BVSLE:		rt=gen_BVSLE (ctx, v1, v2); break;
+		case OP_BVSGT:		rt=gen_BVSGT (ctx, v1, v2); break;
+		case OP_BVSLT:		rt=gen_BVSLT (ctx, v1, v2); break;
+		case OP_BVSUBGE:
+					{
+						struct SMT_var *output;
+						struct SMT_var *cond;
+						gen_BVSUBGE (ctx, ctx->var_always_true, v1, v2, &output, &cond);
+						output->e=e;
+						return output;
+					};
+		case OP_BVUDIV:		rt=gen_BVUDIV (ctx, v1, v2); break;
+		case OP_BVUREM:		rt=gen_BVUREM (ctx, v1, v2); break;
+		case OP_BVSHL:		rt=gen_BVSHL (ctx, gen (ctx, e->op1), gen (ctx, e->op2)); break;
+		case OP_BVLSHR:		rt=gen_BVLSHR (ctx, gen (ctx, e->op1), gen (ctx, e->op2)); break;
+		case OP_BVASHR:		rt=gen_BVASHR (ctx, gen (ctx, e->op1), gen (ctx, e->op2)); break;
+		default:		assert(0);
+	}
+	rt->e=e;
+	return rt;
+};
+
+
 struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 {
-/*
-	printf ("%s() ", __FUNCTION__);
-	print_expr(e);
-	printf ("\n");
-*/
-	if (e->type==EXPR_ID)
+	struct SMT_var* rt;
+		
+	switch (e->node_type)
 	{
-		struct SMT_var* rt=find_variable(ctx, e->id);
-		if(rt==NULL)
-			die ("line %d: variable %s hasn't been declared\n", yylineno, e->id);
-		//printf ("gen -> %d (by id %s)\n", rt->var_no, e->id);
-		rt->e=e;
-		return rt;
-	};
+		case EXPR_ID:
+			rt=find_variable(ctx, e->id);
+			if(rt==NULL)
+				die ("line %d: variable %s hasn't been declared\n", yylineno, e->id);
+			rt->e=e;
+			return rt;
 
-	if (e->type==EXPR_CONST)
-	{
-		//printf ("gen() const\n");
-		struct SMT_var* rt=gen_const(ctx, e->const_val, e->const_width);
-		rt->e=e;
-		return rt;
-	};
+		case EXPR_CONST:
+			rt=gen_const(ctx, e->const_val, e->const_width);
+			rt->e=e;
+			return rt;
 	
-	if (e->type==EXPR_ZERO_EXTEND)
-	{
-		struct SMT_var* rt=gen_zero_extend(ctx, gen(ctx, e->op1), e->const_val);
-		rt->e=e;
-		return rt;
-	};
+		case EXPR_ZERO_EXTEND:
+			rt=gen_zero_extend(ctx, gen(ctx, e->op1), e->const_val);
+			rt->e=e;
+			return rt;
 
-	if (e->type==EXPR_REPEAT)
-	{
-		struct SMT_var* rt=gen_repeat(ctx, gen(ctx, e->op1), e->const_val);
-		rt->e=e;
-		return rt;
-	};
+		case EXPR_REPEAT:
+			rt=gen_repeat(ctx, gen(ctx, e->op1), e->const_val);
+			rt->e=e;
+			return rt;
 
-	if (e->type==EXPR_EXTRACT)
-	{
-		struct SMT_var* rt=gen_extract(ctx, gen(ctx, e->op1), e->const_val, e->const_width);
-		rt->e=e;
-		return rt;
-	};
+		case EXPR_EXTRACT:
+			rt=gen_extract(ctx, gen(ctx, e->op1), e->const_val, e->const_width);
+			rt->e=e;
+			return rt;
 
-	if (e->type==EXPR_UNARY)
-	{
-		struct SMT_var* rt;
-		switch (e->op)
-		{
-			case OP_NOT:		rt=gen_NOT (ctx, gen (ctx, e->op1)); break;
-			case OP_BVNOT:		rt=gen_BVNOT (ctx, gen (ctx, e->op1)); break;
-			case OP_BVNEG:		rt=gen_BVNEG (ctx, gen (ctx, e->op1)); break;
-			case OP_BVSHL1:		rt=gen_shift_left (ctx, gen (ctx, e->op1), 1); break;
-			case OP_BVSHR1:		rt=gen_shift_right (ctx, gen (ctx, e->op1), 1, ctx->var_always_false->SAT_var); break;
-			default:		assert(0);
-		};
-		rt->e=e;
-		return rt;
-	};
-	if (e->type==EXPR_BINARY)
-	{
-		struct SMT_var* v1=gen(ctx, e->op1);
-		struct SMT_var* v2=gen(ctx, e->op2);
-		struct SMT_var* rt;
-		switch (e->op)
-		{
-			case OP_EQ:		rt=gen_EQ (ctx, v1, v2); break;
-			case OP_NEQ:		rt=gen_NEQ (ctx, v1, v2); break;
-			case OP_OR:		rt=gen_OR (ctx, v1, v2); break;
-			case OP_XOR:		rt=gen_XOR (ctx, v1, v2); break;
-			case OP_AND:		rt=gen_AND (ctx, v1, v2); break;
-			case OP_BVOR:		rt=gen_BVOR (ctx, v1, v2); break;
-			case OP_BVXOR:		rt=gen_BVXOR (ctx, v1, v2); break;
-			case OP_BVAND:		rt=gen_BVAND (ctx, v1, v2); break;
-			case OP_BVADD:		rt=gen_BVADD (ctx, v1, v2); break;
-			case OP_BVSUB:		rt=gen_BVSUB (ctx, v1, v2); break;
-			case OP_BVMUL:		rt=gen_BVMUL (ctx, v1, v2, 0); break;
-			case OP_BVMUL_NO_OVERFLOW:	rt=gen_BVMUL (ctx, v1, v2, 1); break;
-			case OP_BVUGE:		rt=gen_BVUGE (ctx, v1, v2); break;
-			case OP_BVULE:		rt=gen_BVULE (ctx, v1, v2); break;
-			case OP_BVUGT:		rt=gen_BVUGT (ctx, v1, v2); break;
-			case OP_BVULT:		rt=gen_BVULT (ctx, v1, v2); break;
-			case OP_BVSGE:		rt=gen_BVSGE (ctx, v1, v2); break;
-			case OP_BVSLE:		rt=gen_BVSLE (ctx, v1, v2); break;
-			case OP_BVSGT:		rt=gen_BVSGT (ctx, v1, v2); break;
-			case OP_BVSLT:		rt=gen_BVSLT (ctx, v1, v2); break;
-			case OP_BVSUBGE:
-						{
-							struct SMT_var *output;
-							struct SMT_var *cond;
-							gen_BVSUBGE (ctx, ctx->var_always_true, v1, v2, &output, &cond);
-							output->e=e;
-							return output;
-						};
-			case OP_BVUDIV:		rt=gen_BVUDIV (ctx, v1, v2); break;
-			case OP_BVUREM:		rt=gen_BVUREM (ctx, v1, v2); break;
-			case OP_BVSHL:		rt=gen_BVSHL (ctx, gen (ctx, e->op1), gen (ctx, e->op2)); break;
-			case OP_BVLSHR:		rt=gen_BVLSHR (ctx, gen (ctx, e->op1), gen (ctx, e->op2)); break;
-			case OP_BVASHR:		rt=gen_BVASHR (ctx, gen (ctx, e->op1), gen (ctx, e->op2)); break;
-			default:		assert(0);
-		}
-		rt->e=e;
-		return rt;
-	};
-	if (e->type==EXPR_TERNARY)
-	{
-		assert (e->op==OP_ITE);
-		struct SMT_var* rt;
+		case EXPR_UNARY:
+			switch (e->op)
+			{
+				case OP_NOT:		rt=gen_NOT (ctx, gen (ctx, e->op1)); break;
+				case OP_BVNOT:		rt=gen_BVNOT (ctx, gen (ctx, e->op1)); break;
+				case OP_BVNEG:		rt=gen_BVNEG (ctx, gen (ctx, e->op1)); break;
+				case OP_BVSHL1:		rt=gen_shift_left (ctx, gen (ctx, e->op1), 1); break;
+				case OP_BVSHR1:		rt=gen_shift_right (ctx, gen (ctx, e->op1), 1, ctx->var_always_false->SAT_var); break;
+				default:		assert(0);
+			};
+			rt->e=e;
+			return rt;
+	
+		case EXPR_BINARY:
+			return gen_binary(ctx, e);
 
-		struct SMT_var* sel=gen(ctx, e->op1);
-		struct SMT_var* t=gen(ctx, e->op2);
-		struct SMT_var* f=gen(ctx, e->op3);
+		case EXPR_TERNARY:
+			assert (e->op==OP_ITE);
 
-		rt=gen_ITE(ctx, sel, t, f);
-		rt->e=e;
-		return rt;
+			rt=gen_ITE(ctx, gen(ctx, e->op1), gen(ctx, e->op2), gen(ctx, e->op3));
+			rt->e=e;
+			return rt;
+
+		default:
+			assert(0);
 	};
-	assert(0);
 };
 
 void create_assert (struct ctx* ctx, struct expr* e)
@@ -1507,7 +1486,7 @@ void create_assert (struct ctx* ctx, struct expr* e)
 
 	// small optimization, however, can't get serious boost...
 	// if expression has form (assert (= x y)), use add_Tseitin_EQ_bitvecs here
-	if (e->type==EXPR_BINARY && e->op==OP_EQ)
+	if (e->node_type==EXPR_BINARY && e->op==OP_EQ)
 	{
 		struct SMT_var *op1=gen(ctx, e->op1);
 		struct SMT_var *op2=gen(ctx, e->op2);

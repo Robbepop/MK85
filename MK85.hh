@@ -79,7 +79,7 @@ enum EXPR_TYPE
 
 struct expr
 {
-	enum EXPR_TYPE type; // rename to node_type?
+	enum EXPR_TYPE node_type; // rename to node_type?
 
 	// in case of EXPR_ID
 	char* id;
