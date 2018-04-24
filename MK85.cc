@@ -101,6 +101,7 @@ struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2)
 	if (verbose>=2)
 	{
 		printf ("%s()\n", __FUNCTION__);
+		printf ("t=%s\n", op_name(t));
 		printf ("op1=");
 		print_expr(op1);
 		printf ("\n");
@@ -112,7 +113,7 @@ struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2)
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	memset (rt, 0, sizeof(struct expr));
 	rt->node_type=EXPR_BINARY;
-	if (t==OP_EQ || t==OP_NEQ)
+	if (t==OP_EQ || t==OP_NEQ || t==OP_BVUGE || t==OP_BVUGT || t==OP_BVULE || t==OP_BVULT)
 	{
 		rt->type=TY_BOOL;
 		rt->width=1;
@@ -319,6 +320,7 @@ const char* op_name(enum OP op)
 	};
 };
 
+// FIXME this meanness
 void print_expr(struct expr* e)
 {
 	assert(e);
@@ -372,6 +374,81 @@ void print_expr(struct expr* e)
 		default:
 			assert (0);
 	}
+};
+
+// FIXME:
+static char expr_to_string_buf[1024]; // YES
+
+// FIXME this meanness
+std::string cpp_expr_to_string(struct expr* e)
+{
+	assert(e);
+	std::string rt;
+	char tbuf[128];
+
+	switch (e->node_type)
+	{
+		case EXPR_ID:
+			return std::string(e->id);
+
+		case EXPR_CONST:
+			sprintf (tbuf, "%d (%d bits)", e->const_val, e->width);
+			return std::string(tbuf);
+
+		case EXPR_ZERO_EXTEND:
+			sprintf (tbuf, "(ZEXT by %d bits: ", e->const_val);
+			rt=rt+std::string(tbuf);
+			rt=rt+expr_to_string(e->op1);
+			rt=rt+")";
+			return rt;
+		case EXPR_REPEAT:
+			sprintf (tbuf, "(repeat %d times: ", e->const_val);
+			rt=rt+std::string(tbuf);
+			rt=rt+expr_to_string(e->op1);
+			rt=rt+")";
+			return rt;
+		case EXPR_EXTRACT:
+			sprintf (tbuf, "(extract, start=%d width=%d bits: ", e->const_val, e->width);
+			rt=rt+std::string(tbuf);
+			rt=rt+expr_to_string(e->op1);
+			rt=rt+")";
+			return rt;
+		case EXPR_UNARY:
+			sprintf (tbuf, "(%s ", op_name(e->op));
+			rt=rt+std::string(tbuf);
+			rt=rt+expr_to_string(e->op1);
+			rt=rt+")";
+			return rt;
+		case EXPR_BINARY:
+			sprintf (tbuf, "(%s ", op_name(e->op));
+			rt=rt+std::string(tbuf);
+			rt=rt+expr_to_string(e->op1);
+			rt=rt+" ";
+			rt=rt+expr_to_string(e->op2);
+			rt=rt+")";
+			return rt;
+
+		case EXPR_TERNARY:
+			sprintf (tbuf, "(%s ", op_name(e->op));
+			rt=rt+std::string(tbuf);
+			rt=rt+expr_to_string(e->op1);
+			rt=rt+" ";
+			rt=rt+expr_to_string(e->op2);
+			rt=rt+" ";
+			rt=rt+expr_to_string(e->op3);
+			rt=rt+")";
+			return rt;
+		default:
+			assert (0);
+	}
+};
+
+// FIXME:
+char * expr_to_string(struct expr* e)
+{
+	strcpy (expr_to_string_buf, cpp_expr_to_string(e).c_str());
+
+	return expr_to_string_buf;
 };
 
 const char* false_true_s[2]={"false", "true"};

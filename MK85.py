@@ -7,12 +7,22 @@ def And (*args):
     else:
         return args[0] & And(*args[1:])
 
+def Or (*args):
+    assert len(args) >= 2
+    if len(args)==2:
+        return args[0] | args[1]
+    else:
+        return args[0] | Or(*args[1:])
+
 class expr:
 
     def __init__ (self, lib, ctx, expr):
         self.lib=lib
         self.ctx=ctx
         self.expr=expr
+
+    def __str__ (self):
+       return self.lib.expr_to_string(self.expr)
 
     # we need op1 to get width of it
     def make_const_if_need (self, op1, op2):
@@ -29,6 +39,21 @@ class expr:
         else:
             e=self.lib.create_bin_expr(MK85.OP_BVAND, self.expr, other.expr)
 
+        return expr(self.lib, self.ctx, e)
+
+    def __or__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+
+        if self.lib.get_type_of_expr(self.expr)==MK85.TY_BOOL:
+            e=self.lib.create_bin_expr(MK85.OP_OR, self.expr, other.expr)
+        else:
+            e=self.lib.create_bin_expr(MK85.OP_BVOR, self.expr, other.expr)
+
+        return expr(self.lib, self.ctx, e)
+
+    def __xor__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVXOR, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
     def __rshift__ (self, other):
@@ -53,6 +78,7 @@ class expr:
         return expr(self.lib, self.ctx, e)
 
     def __ne__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
         e=self.lib.create_bin_expr(MK85.OP_NEQ, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
@@ -134,11 +160,14 @@ class MK85:
 
         self.lib.check_sat.restype=c_bool
 
-        #self.lib.set_verbose(2)
+        #self.lib.set_verbose(1)
         self.ctx=self.lib.MK85_init()
         self.state=None
         self.vars={}
         self.solution={}
+
+        self.lib.expr_to_string.argtypes=[c_uint]
+        self.lib.expr_to_string.restype=c_char_p
 
     def Bool(self, name):
         assert name not in self.vars.keys()
@@ -171,4 +200,8 @@ class MK85:
         for i in range(len(args)-1):
             self.lib.set_next(args[i].expr, args[i+1].expr)
         return expr(self.lib, self.ctx, self.lib.create_distinct_expr(args[0].expr))
+
+    def BVMulNoOverflow (self, op1, op2):
+        e=self.lib.create_bin_expr(MK85.OP_BVMUL_NO_OVERFLOW, op1.expr, op2.expr)
+        return expr(self.lib, self.ctx, e)
 

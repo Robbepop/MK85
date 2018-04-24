@@ -64,6 +64,7 @@ struct expr* create_repeat_expr(int times, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);
 enum TY get_type_of_expr(struct expr*);
 int get_width_of_expr(struct expr*);
+char * expr_to_string(struct expr* e);
 
 // DIRTY HACK!
 // rationale: encapsulate "struct expr" details from API users
