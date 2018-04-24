@@ -16,17 +16,28 @@ class expr:
 
     # we need op1 to get width of it
     def make_const_if_need (self, op1, op2):
-        if type(op2)==int:
+        if type(op2)==int or type(op2)==long:
             w=self.lib.get_width_of_expr(op1)
             op2=expr(self.lib, self.ctx, self.lib.create_const_expr(op2, w))
         return op2
 
     def __and__ (self, other):
-        # FIXME: choose ebtween AND and BVAND
-        e=self.lib.create_bin_expr(MK85.OP_AND, self.expr, other.expr)
+        other=self.make_const_if_need(self.expr, other)
+
+        if self.lib.get_type_of_expr(self.expr)==MK85.TY_BOOL:
+            e=self.lib.create_bin_expr(MK85.OP_AND, self.expr, other.expr)
+        else:
+            e=self.lib.create_bin_expr(MK85.OP_BVAND, self.expr, other.expr)
+
+        return expr(self.lib, self.ctx, e)
+
+    def __rshift__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVLSHR, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
     def __add__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
         e=self.lib.create_bin_expr(MK85.OP_BVADD, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
@@ -45,9 +56,24 @@ class expr:
         e=self.lib.create_bin_expr(MK85.OP_NEQ, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
+    def __ge__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVUGE, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
+    def __gt__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVUGT, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
     def __le__ (self, other):
         other=self.make_const_if_need(self.expr, other)
         e=self.lib.create_bin_expr(MK85.OP_BVULE, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
+    def __lt__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVULT, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
     def Not (self):
@@ -98,7 +124,13 @@ class MK85:
         self.lib.create_bin_expr.argtypes=[c_uint, c_void_p, c_void_p]
         self.lib.create_bin_expr.restype=c_void_p
 
+        self.lib.create_distinct_expr.argtypes=[c_void_p]
+        
+	self.lib.create_const_expr.argtypes=[c_ulong, c_int]
+
         self.lib.create_assert.argtypes=[c_uint, c_void_p]
+
+        self.lib.set_next.argtypes=[c_void_p, c_void_p]
 
         self.lib.check_sat.restype=c_bool
 
@@ -134,4 +166,9 @@ class MK85:
         for v in self.vars:
             self.solution[v]=self.lib.get_variable_val(self.ctx, v);
         return self.solution
+
+    def Distinct(self, args):
+        for i in range(len(args)-1):
+            self.lib.set_next(args[i].expr, args[i+1].expr)
+        return expr(self.lib, self.ctx, self.lib.create_distinct_expr(args[0].expr))
 
