@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# see also: https://yurichev.com/blog/factor/
+
 import random
 from MK85 import *
 from operator import mul
