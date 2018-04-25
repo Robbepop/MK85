@@ -154,7 +154,7 @@ expr:	T_ID
 	| T_CONST
         | T_L_PAREN T_UNDERSCORE T_BV_DEC_CONST T_NUMBER T_R_PAREN
 	{
-		$$=create_const_expr($3, $4);
+		$$=create_const_expr(TY_BITVEC, $3, $4);
 	}
         | T_L_PAREN T_L_PAREN T_UNDERSCORE T_ZERO_EXTEND T_NUMBER T_R_PAREN expr T_R_PAREN
 	{

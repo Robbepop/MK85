@@ -81,7 +81,7 @@ bv[0-9]+	{
 
 			int width=strlen(yytext+2)*4;
 			//printf ("%s:%d width=%d\n", __FUNCTION__, __LINE__, width);
-			yylval.e=create_const_expr(val, width);
+			yylval.e=create_const_expr(TY_BITVEC, val, width);
 			return T_CONST;
 		}
 

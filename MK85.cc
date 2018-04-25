@@ -233,13 +233,13 @@ struct expr* create_distinct_expr(struct expr* args)
 	};
 }
 
-struct expr* create_const_expr(uint32_t c, int w)
+struct expr* create_const_expr(enum TY t, uint32_t c, int w)
 {
 	//printf ("%s(%d, %d)\n", __FUNCTION__, c, w);
 	struct expr* rt=(struct expr*)xmalloc(sizeof(struct expr));
 	rt->node_type=EXPR_CONST;
 	rt->const_val=c;
-	rt->type=TY_BITVEC;
+	rt->type=t;
 	rt->width=w;
 	return rt;
 };

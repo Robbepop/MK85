@@ -28,7 +28,9 @@ class expr:
     def make_const_if_need (self, op1, op2):
         if type(op2)==int or type(op2)==long:
             w=self.lib.get_width_of_expr(op1)
-            op2=expr(self.lib, self.ctx, self.lib.create_const_expr(op2, w))
+            op2=expr(self.lib, self.ctx, self.lib.create_const_expr(MK85.TY_BITVEC, op2, w))
+        if type(op2)==bool:
+            op2=expr(self.lib, self.ctx, self.lib.create_const_expr(MK85.TY_BOOL, op2, 1))
         return op2
 
     def __and__ (self, other):
@@ -69,7 +71,6 @@ class expr:
     def __mul__ (self, other):
         other=self.make_const_if_need(self.expr, other)
         e=self.lib.create_bin_expr(MK85.OP_BVMUL, self.expr, other.expr)
-        #e=self.lib.create_bin_expr(MK85.OP_BVMUL_NO_OVERFLOW, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
     def __eq__ (self, other):
@@ -152,7 +153,7 @@ class MK85:
 
         self.lib.create_distinct_expr.argtypes=[c_void_p]
         
-	self.lib.create_const_expr.argtypes=[c_ulong, c_int]
+	self.lib.create_const_expr.argtypes=[c_uint, c_ulong, c_int]
 
         self.lib.create_assert.argtypes=[c_uint, c_void_p]
 
@@ -172,7 +173,7 @@ class MK85:
     def Bool(self, name):
         assert name not in self.vars.keys()
         self.vars[name]=MK85.TY_BOOL
-        SMT_var=self.lib.declare_variable(self.ctx, name, MK85.TY_BOOL, 0, 0)
+        SMT_var=self.lib.declare_variable(self.ctx, name, MK85.TY_BOOL, 1, 0)
         return expr(self.lib, self.ctx, self.lib.create_id(self.ctx, name))
 
     def BitVec(self, name, width):
@@ -203,5 +204,10 @@ class MK85:
 
     def BVMulNoOverflow (self, op1, op2):
         e=self.lib.create_bin_expr(MK85.OP_BVMUL_NO_OVERFLOW, op1.expr, op2.expr)
+        return expr(self.lib, self.ctx, e)
+
+    def If (self, op1, op2, op3):
+        op3=op2.make_const_if_need(op2, op3)
+        e=self.lib.create_ternary_expr(MK85.OP_ITE, op1.expr, op2.expr, op3.expr)
         return expr(self.lib, self.ctx, e)
 

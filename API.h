@@ -58,7 +58,7 @@ struct expr* create_bin_expr(enum OP t, struct expr* op1, struct expr* op2);
 struct expr* create_ternary_expr(enum OP t, struct expr* op1, struct expr* op2, struct expr* op3);
 struct expr* create_vararg_expr(enum OP t, struct expr* args);
 struct expr* create_distinct_expr(struct expr* args);
-struct expr* create_const_expr(uint32_t c, int w);
+struct expr* create_const_expr(enum TY t, uint32_t c, int w);
 struct expr* create_zero_extend_expr(int bits, struct expr* e);
 struct expr* create_repeat_expr(int times, struct expr* e);
 struct expr* create_extract_expr(unsigned end, unsigned start, struct expr* e);

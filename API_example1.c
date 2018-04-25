@@ -22,19 +22,19 @@ int main()
 	struct SMT_var* e=declare_variable(ctx, "e", TY_BITVEC, 16, 0);
 	struct SMT_var* f=declare_variable(ctx, "f", TY_BITVEC, 16, 0);
 
-	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "a"), create_const_expr(10, 16)));
-	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "b"), create_const_expr(10, 16)));
-	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "c"), create_const_expr(10, 16)));
-	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "d"), create_const_expr(10, 16)));
-	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "e"), create_const_expr(10, 16)));
-	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "f"), create_const_expr(10, 16)));
+	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "a"), create_const_expr(TY_BITVEC, 10, 16)));
+	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "b"), create_const_expr(TY_BITVEC, 10, 16)));
+	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "c"), create_const_expr(TY_BITVEC, 10, 16)));
+	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "d"), create_const_expr(TY_BITVEC, 10, 16)));
+	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "e"), create_const_expr(TY_BITVEC, 10, 16)));
+	create_assert(ctx, create_bin_expr(OP_BVULT, create_id(ctx, "f"), create_const_expr(TY_BITVEC, 10, 16)));
 
-	struct expr* t1=create_bin_expr(OP_BVMUL, create_id(ctx, "a"), create_const_expr(215, 16));
-	struct expr* t2=create_bin_expr(OP_BVMUL, create_id(ctx, "b"), create_const_expr(275, 16));
-	struct expr* t3=create_bin_expr(OP_BVMUL, create_id(ctx, "c"), create_const_expr(335, 16));
-	struct expr* t4=create_bin_expr(OP_BVMUL, create_id(ctx, "d"), create_const_expr(355, 16));
-	struct expr* t5=create_bin_expr(OP_BVMUL, create_id(ctx, "e"), create_const_expr(420, 16));
-	struct expr* t6=create_bin_expr(OP_BVMUL, create_id(ctx, "f"), create_const_expr(580, 16));
+	struct expr* t1=create_bin_expr(OP_BVMUL, create_id(ctx, "a"), create_const_expr(TY_BITVEC, 215, 16));
+	struct expr* t2=create_bin_expr(OP_BVMUL, create_id(ctx, "b"), create_const_expr(TY_BITVEC, 275, 16));
+	struct expr* t3=create_bin_expr(OP_BVMUL, create_id(ctx, "c"), create_const_expr(TY_BITVEC, 335, 16));
+	struct expr* t4=create_bin_expr(OP_BVMUL, create_id(ctx, "d"), create_const_expr(TY_BITVEC, 355, 16));
+	struct expr* t5=create_bin_expr(OP_BVMUL, create_id(ctx, "e"), create_const_expr(TY_BITVEC, 420, 16));
+	struct expr* t6=create_bin_expr(OP_BVMUL, create_id(ctx, "f"), create_const_expr(TY_BITVEC, 580, 16));
 
 	// form a chain out of expressions:
 	set_next(t1, t2);
@@ -43,7 +43,7 @@ int main()
 	set_next(t4, t5);
 	set_next(t5, t6);
 
-	create_assert(ctx, create_bin_expr(OP_EQ, create_vararg_expr(OP_BVADD, t1), create_const_expr(1505, 16)));
+	create_assert(ctx, create_bin_expr(OP_EQ, create_vararg_expr(OP_BVADD, t1), create_const_expr(TY_BITVEC, 1505, 16)));
 
 	while (check_sat(ctx)==1)
 	{
@@ -63,12 +63,12 @@ int main()
 		printf ("f=%d\n", solution_f);
 
 		// block current solution:
-		t1=create_bin_expr(OP_EQ, create_id(ctx, "a"), create_const_expr(solution_a, 16));
-		t2=create_bin_expr(OP_EQ, create_id(ctx, "b"), create_const_expr(solution_b, 16));
-		t3=create_bin_expr(OP_EQ, create_id(ctx, "c"), create_const_expr(solution_c, 16));
-		t4=create_bin_expr(OP_EQ, create_id(ctx, "d"), create_const_expr(solution_d, 16));
-		t5=create_bin_expr(OP_EQ, create_id(ctx, "e"), create_const_expr(solution_e, 16));
-		t6=create_bin_expr(OP_EQ, create_id(ctx, "f"), create_const_expr(solution_f, 16));
+		t1=create_bin_expr(OP_EQ, create_id(ctx, "a"), create_const_expr(TY_BITVEC, solution_a, 16));
+		t2=create_bin_expr(OP_EQ, create_id(ctx, "b"), create_const_expr(TY_BITVEC, solution_b, 16));
+		t3=create_bin_expr(OP_EQ, create_id(ctx, "c"), create_const_expr(TY_BITVEC, solution_c, 16));
+		t4=create_bin_expr(OP_EQ, create_id(ctx, "d"), create_const_expr(TY_BITVEC, solution_d, 16));
+		t5=create_bin_expr(OP_EQ, create_id(ctx, "e"), create_const_expr(TY_BITVEC, solution_e, 16));
+		t6=create_bin_expr(OP_EQ, create_id(ctx, "f"), create_const_expr(TY_BITVEC, solution_f, 16));
 
 		// form a chain out of expressions:
 		set_next(t1, t2);
