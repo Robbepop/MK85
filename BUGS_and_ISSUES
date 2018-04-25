@@ -1,0 +1,4 @@
+* 64-bit constants?
+
+* slowdown in distinct() with >30 arguments
+
