@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from MK85 import *
 
+# https://yurichev.com/blog/regexp/
+
 BIT_WIDTH=16
 
 INVALID_STATE=999
