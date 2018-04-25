@@ -145,7 +145,7 @@ class MK85:
     OP_BVUREM=30
     OP_ITE=31
 
-    def __init__(self):
+    def __init__(self, verbose=0):
         self.lib=CDLL("./libMK85.so")
 
         self.lib.create_bin_expr.argtypes=[c_uint, c_void_p, c_void_p]
@@ -161,7 +161,7 @@ class MK85:
 
         self.lib.check_sat.restype=c_bool
 
-        #self.lib.set_verbose(1)
+        self.lib.set_verbose(verbose)
         self.ctx=self.lib.MK85_init()
         self.state=None
         self.vars={}
@@ -180,6 +180,9 @@ class MK85:
         assert name not in self.vars.keys()
         self.vars[name]=MK85.TY_BITVEC
         SMT_var=self.lib.declare_variable(self.ctx, name, MK85.TY_BITVEC, width, 0)
+        return expr(self.lib, self.ctx, self.lib.create_id(self.ctx, name))
+
+    def var_by_name (self, name):
         return expr(self.lib, self.ctx, self.lib.create_id(self.ctx, name))
 
     def add (self, constraint):
@@ -210,4 +213,7 @@ class MK85:
         op3=op2.make_const_if_need(op2, op3)
         e=self.lib.create_ternary_expr(MK85.OP_ITE, op1.expr, op2.expr, op3.expr)
         return expr(self.lib, self.ctx, e)
+
+    def BitVecConst(self, val, w):
+        return expr(self.lib, self.ctx, self.lib.create_const_expr(MK85.TY_BITVEC, val, w))
 
