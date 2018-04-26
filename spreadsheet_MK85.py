@@ -2,6 +2,21 @@
 
 # see: https://yurichev.com/blog/spreadsheet/
 
+"""
+test file:
+
+1	0	B0+B2		A0*B0*C0
+123	10	12		11
+667	A0+B1	(C1*A0)*122	A3+C2
+
+result:
+
+1	0	135	82041	
+123	10	12	11	
+667	11	1342	83383	
+
+"""
+
 from MK85 import *
 import sys, re
 
@@ -50,4 +65,5 @@ if s.check():
         for c in range(WIDTH):
             sys.stdout.write (str(m[coord_to_name(r, c)])+"\t")
         sys.stdout.write ("\n")
+
 
