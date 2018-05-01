@@ -161,6 +161,8 @@ class MK85:
 
         self.lib.check_sat.restype=c_bool
 
+        self.lib.get_variable_val.restype=c_uint
+
         self.lib.set_verbose(verbose)
         self.ctx=self.lib.MK85_init()
         self.state=None
