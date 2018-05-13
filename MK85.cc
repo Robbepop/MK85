@@ -1444,7 +1444,7 @@ struct SMT_var* gen_BVMUL(struct ctx* ctx, struct SMT_var* X, struct SMT_var* Y,
 	for (int i=1; i<w; i++)
 		product=gen_BVADD(ctx, product, partial_products2[i]);
 
-	// fix high part at 0?
+	// "ground" high part to 0?
 	if (type==1)
 		fix_BV_to_zero(ctx, product->SAT_var+w, w);
 

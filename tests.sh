@@ -39,7 +39,6 @@ fi
 ./MK85 tests/bvneg_test.smt > tmp && diff tmp tests/bvneg_test.correct
 ./MK85 tests/t1.smt > tmp && diff tmp tests/t1.correct
 ./MK85 tests/XOR_alter.smt > tmp && diff tmp tests/XOR_alter.correct
-./MK85 tests/modinv.smt > tmp && diff tmp tests/modinv.correct
 ./MK85 tests/bvneg_count_fixpoints.smt > tmp && diff tmp tests/bvneg_count_fixpoints.correct
 
 ./MK85 tests/bvshl2_test.smt > tmp && diff tmp tests/bvshl2_test.correct
@@ -50,7 +49,6 @@ fi
 
 ./MK85 examples/optimize/GCD_BV3.smt > tmp && diff tmp examples/optimize/GCD_BV3.correct
 ./MK85 examples/optimize/LCM_BV1.smt > tmp && diff tmp examples/optimize/LCM_BV1.correct
-./MK85 examples/optimize/assign_problem.smt > tmp && diff tmp examples/optimize/assign_problem.correct
 
 ./MK85 tests/repeat.smt > tmp && diff tmp tests/repeat.correct
 

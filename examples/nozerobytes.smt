@@ -7,6 +7,8 @@
 
 ; here we prove that it's correct for all possible 32-bit words
 
+; checked with Z3 and MK85
+
 (set-logic QF_BV)
 (set-info :smt-lib-version 2.0)
 
