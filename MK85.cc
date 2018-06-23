@@ -1641,7 +1641,7 @@ void create_assert (struct ctx* ctx, struct expr* e)
 		return;
 	}
 
-	// otherwise, EQ will be gend and "grounded" to True,
+	// otherwise, EQ will be generated and "grounded" to True,
 	// which can be inefficient, because EQ is NOT-OR-XOR
 	struct SMT_var* v=gen(ctx, e);
 	add_comment (ctx, "%s() id=%s var=%d", __FUNCTION__, v->id.c_str(), v->SAT_var);

@@ -36,6 +36,13 @@ MK85.o: MK85.cc
 API_example1: API_example1.c
 	gcc API_example1.c -o API_example1 libMK85.so 
 
+install:
+	mkdir -p /usr/lib/python2.7/dist-packages/MK85
+	cp MK85.py /usr/lib/python2.7/dist-packages/MK85
+	cp libMK85.so /usr/lib/python2.7/dist-packages/MK85
+	cp __init__.py /usr/lib/python2.7/dist-packages/MK85
+	#touch /usr/lib/python2.7/dist-packages/MK85/__init__.py
+ 
 clean:
 	rm *.o
 	rm lex.yy.c

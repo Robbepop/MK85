@@ -1,4 +1,5 @@
 from ctypes import *
+import sys
 
 def And (*args):
     assert len(args) >= 2
@@ -146,7 +147,15 @@ class MK85:
     OP_ITE=31
 
     def __init__(self, verbose=0):
-        self.lib=CDLL("./libMK85.so")
+        for d in sys.path:
+            try:
+                self.lib=CDLL(d+"/MK85/libMK85.so")
+            except:
+                pass
+
+        if self.lib==None:
+            print "Error: Can't find libMK85.so"
+            exit(0)
 
         self.lib.create_bin_expr.argtypes=[c_uint, c_void_p, c_void_p]
         self.lib.create_bin_expr.restype=c_void_p

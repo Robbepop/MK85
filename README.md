@@ -27,6 +27,12 @@ First, you can check your .smt files using other SMT solver (I used z3, Boolecto
 
 Xenia Galinskaya, for support.
 
+## Installation
+
+	make
+
+	sudo make install (copies python files and .so library to dist-package...)
+
 ## Non-standard SMT-LIB commands
 
 Aside from SMT-LIB standard, I also added two more commands: (get-all-models) and (count-models) (see "tests").
