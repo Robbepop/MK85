@@ -1025,6 +1025,7 @@ void gen_divisor (struct ctx* ctx, struct SMT_var* divident, struct SMT_var* div
 		struct SMT_var* cond;
 		gen_BVSUBGE(ctx, enable, divident, gen_extract(ctx, wide2, 0, w), &divident, &cond);
 		struct SMT_var* latch2;
+		// output bit must be zero if enable==0 (IOW: if high part of wide2 is not zero)
 		latch2=gen_ITE(ctx, enable, cond, ctx->var_always_false);
 		add_Tseitin_EQ(ctx, latch2->SAT_var, (*q)->SAT_var+w-1-i);
 		if (i+1==w)
