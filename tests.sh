@@ -36,6 +36,7 @@ fi
 ./MK85 tests/bvsubge.smt > tmp && diff tmp tests/bvsubge.correct
 ./MK85 tests/bvudiv_test.smt > tmp && diff tmp tests/bvudiv_test.correct
 ./MK85 tests/bvudiv_test2.smt > tmp && diff tmp tests/bvudiv_test2.correct
+./MK85 tests/bvudiv_test3.smt > tmp && diff tmp tests/bvudiv_test3.correct
 ./MK85 tests/bvneg_test.smt > tmp && diff tmp tests/bvneg_test.correct
 ./MK85 tests/t1.smt > tmp && diff tmp tests/t1.correct
 ./MK85 tests/XOR_alter.smt > tmp && diff tmp tests/XOR_alter.correct

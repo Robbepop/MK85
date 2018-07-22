@@ -7,6 +7,8 @@
 (assert (= (bvudiv a b) #x10))
 (assert (= (bvurem a b) #x03))
 
+(assert (= b #x0c))
+
 (check-sat)
 (get-model)
 

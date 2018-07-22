@@ -1,5 +1,5 @@
 I only tested this on Linux.
 No idea if it will work on another platforms.
 
-Compilation: install flex, bison, run "make".
+Compilation: install flex, bison, run "make", "sudo make install".
 

@@ -79,6 +79,8 @@ int check_sat(struct ctx* ctx);
 
 uint32_t get_variable_val(struct ctx* ctx, char* id);
 
+unsigned int count_models(struct ctx* ctx);
+
 #ifdef __cplusplus
 }
 #endif

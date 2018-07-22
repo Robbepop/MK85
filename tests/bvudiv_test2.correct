@@ -1,5 +1,5 @@
 sat
 (model
-	(define-fun a () (_ BitVec 8) (_ bv115 8)) ; 0x73
-	(define-fun b () (_ BitVec 8) (_ bv7 8)) ; 0x7
+	(define-fun a () (_ BitVec 8) (_ bv195 8)) ; 0xc3
+	(define-fun b () (_ BitVec 8) (_ bv12 8)) ; 0xc
 )

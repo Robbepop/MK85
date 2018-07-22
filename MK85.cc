@@ -1024,7 +1024,9 @@ void gen_divisor (struct ctx* ctx, struct SMT_var* divident, struct SMT_var* div
 
 		struct SMT_var* cond;
 		gen_BVSUBGE(ctx, enable, divident, gen_extract(ctx, wide2, 0, w), &divident, &cond);
-		add_Tseitin_EQ(ctx, cond->SAT_var, (*q)->SAT_var+w-1-i);
+		struct SMT_var* latch2;
+		latch2=gen_ITE(ctx, enable, cond, ctx->var_always_false);
+		add_Tseitin_EQ(ctx, latch2->SAT_var, (*q)->SAT_var+w-1-i);
 		if (i+1==w)
 			break;
 		wide2=gen_shift_right(ctx, wide2, 1, ctx->var_always_false->SAT_var);
@@ -1916,7 +1918,7 @@ void minisat_get_all_models(struct ctx* ctx, bool dump_variables)
 	printf ("Model count: %d\n", total);
 };
 
-void picosat_get_all_models(struct ctx* ctx, bool dump_variables)
+int picosat_get_all_models(struct ctx* ctx, bool dump_variables, bool print_model_count)
 {
 	assert (ctx->maxsat==false);
 	int total=0;
@@ -1946,13 +1948,20 @@ void picosat_get_all_models(struct ctx* ctx, bool dump_variables)
 		picosat_add(p, 0);
 	};
 	picosat_reset(p);
-	printf ("Model count: %d\n", total);
+	if (print_model_count)
+		printf ("Model count: %d\n", total);
+	return total;
 };
 
 void get_all_models(struct ctx* ctx, bool dump_variables)
 {
 	//minisat_get_all_models(dump_variables);
-	picosat_get_all_models(ctx, dump_variables);
+	picosat_get_all_models(ctx, dump_variables, true);
+};
+
+unsigned int count_models(struct ctx* ctx)
+{
+	return picosat_get_all_models(ctx, false, false);
 };
 
 struct ctx* MK85_init()

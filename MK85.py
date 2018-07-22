@@ -69,9 +69,24 @@ class expr:
         e=self.lib.create_bin_expr(MK85.OP_BVADD, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
+    def __sub__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVSUB, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
     def __mul__ (self, other):
         other=self.make_const_if_need(self.expr, other)
         e=self.lib.create_bin_expr(MK85.OP_BVMUL, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
+    def __div__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVUDIV, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
+    def __mod__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVUREM, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
     def __eq__ (self, other):
@@ -172,6 +187,9 @@ class MK85:
 
         self.lib.get_variable_val.restype=c_uint
 
+        self.lib.count_models.argtypes=[c_void_p]
+        self.lib.count_models.restype=c_uint
+
         self.lib.set_verbose(verbose)
         self.ctx=self.lib.MK85_init()
         self.state=None
@@ -205,6 +223,9 @@ class MK85:
     def check (self):
         self.state=self.lib.check_sat(self.ctx)
         return self.state
+
+    def count_models (self):
+        return self.lib.count_models(self.ctx)
 
     def model (self):
         for v in self.vars:
