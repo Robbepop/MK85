@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <list>
+#include <vector>
 #include <string>
 #include <iterator>
 #include <iostream>
@@ -153,6 +154,14 @@ std::string remove_trailing_space (std::string s)
 };
 
 std::string cxx_list_of_ints_to_string (std::list<int> l)
+{
+	// https://stackoverflow.com/questions/2518979/how-to-transform-a-vectorint-into-a-string
+	std::stringstream result;
+	std::copy(l.begin(), l.end(), std::ostream_iterator<int>(result, " "));
+	return remove_trailing_space(result.str());
+};
+
+std::string cxx_list_of_vectors_to_string (std::vector<int> l)
 {
 	// https://stackoverflow.com/questions/2518979/how-to-transform-a-vectorint-into-a-string
 	std::stringstream result;

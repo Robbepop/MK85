@@ -51,6 +51,7 @@ void add_Tseitin_ITE_BV (struct ctx* ctx, int s, int t, int f, int x, int width)
 void assure_TY_BOOL(const char* func, struct SMT_var* v);
 void assure_TY_BITVEC(const char* func, struct SMT_var* v);
 void assure_eq_widths(const char *name, struct SMT_var* v1, struct SMT_var* v2);
+void fix_BV_to_zero (struct ctx* ctx, int v, int width);
 
 void set_verbose(int level)
 {
@@ -314,6 +315,7 @@ const char* op_name(enum OP op)
 		case OP_BVASHR:	return "bvashr";
 		case OP_BVMUL:	return "bvmul";
 		case OP_BVMUL_NO_OVERFLOW:	return "bvmul_no_overflow";
+		case OP_BVUDIV:	return "bvudiv";
 		case OP_ITE:	return "ite";
 		default:
 			assert(0);
@@ -377,7 +379,7 @@ void print_expr(struct expr* e)
 };
 
 // FIXME:
-static char expr_to_string_buf[1024]; // YES
+//static char expr_to_string_buf[102400]; // YES
 
 // FIXME this meanness
 std::string cpp_expr_to_string(struct expr* e)
@@ -443,12 +445,18 @@ std::string cpp_expr_to_string(struct expr* e)
 	}
 };
 
-// FIXME:
+// FIXME: how/when buffer should be be freed?
 char * expr_to_string(struct expr* e)
 {
-	strcpy (expr_to_string_buf, cpp_expr_to_string(e).c_str());
+	if (verbose)
+		printf ("%s() begin\n", __FUNCTION__);
 
-	return expr_to_string_buf;
+	char* rt=(char*)malloc(cpp_expr_to_string(e).size()+1);
+	//strcpy (expr_to_string_buf, cpp_expr_to_string(e).c_str());
+	strcpy (rt, cpp_expr_to_string(e).c_str());
+
+	//return expr_to_string_buf;
+	return rt;
 };
 
 const char* false_true_s[2]={"false", "true"};
@@ -456,8 +464,10 @@ const char* false_true_s[2]={"false", "true"};
 void dump_all_variables(struct ctx* ctx, bool dump_internal)
 {
 	printf ("(model\n");
-	for (auto v : ctx->vars)
+	for (auto i : ctx->vars)
 	{
+		struct SMT_var* v=i.second;
+
 		if (v->internal && dump_internal==false)
 			continue; // skip internal variables
 
@@ -489,11 +499,10 @@ void dump_all_variables(struct ctx* ctx, bool dump_internal)
 
 struct SMT_var* find_variable(struct ctx* ctx, std::string id)
 {
-	for (auto v : ctx->vars)
-	{
-		if (id==v->id)
-			return v;
-	};
+	auto t=ctx->vars.find(id);
+	if (t!=ctx->vars.end())
+		return t->second;
+
 	return NULL;
 };
 
@@ -537,7 +546,7 @@ struct SMT_var* declare_variable(struct ctx* ctx, const char* name, enum TY type
 		assert(0);
 	//printf ("%s() %s var_no=%d\n", __FUNCTION__, name, v->var_no);
 	v->internal=internal;
-	ctx->vars.push_back(v);
+	ctx->vars[v->id]=v;
 	return v;
 }
 
@@ -570,6 +579,7 @@ void add_clause1(struct ctx* ctx, int v1)
 	c.type=HARD_CLASUE;
 	c.li.push_back(v1);
 	ctx->clauses.push_back(c);
+	//ctx->clauses.push_front(c);
 };
 
 void add_clause2(struct ctx* ctx, int v1, int v2)
@@ -580,6 +590,7 @@ void add_clause2(struct ctx* ctx, int v1, int v2)
 	c.li.push_back(v1);
 	c.li.push_back(v2);
 	ctx->clauses.push_back(c);
+	//ctx->clauses.push_front(c);
 };
 
 void add_clause3(struct ctx* ctx, int v1, int v2, int v3)
@@ -591,6 +602,7 @@ void add_clause3(struct ctx* ctx, int v1, int v2, int v3)
 	c.li.push_back(v2);
 	c.li.push_back(v3);
 	ctx->clauses.push_back(c);
+	//ctx->clauses.push_front(c);
 };
 
 void add_clause4(struct ctx* ctx, int v1, int v2, int v3, int v4)
@@ -603,10 +615,14 @@ void add_clause4(struct ctx* ctx, int v1, int v2, int v3, int v4)
 	c.li.push_back(v3);
 	c.li.push_back(v4);
 	ctx->clauses.push_back(c);
+	//ctx->clauses.push_front(c);
 };
 
 void add_comment(struct ctx* ctx, const char* fmt, ...)
 {
+	if (ctx->write_CNF_file==false)
+		return;
+
 	va_list va;
 
 	va_start (va, fmt);
@@ -631,11 +647,13 @@ void add_comment(struct ctx* ctx, const char* fmt, ...)
 	c.type=COMMENT;
 	c.s=buf;
 	ctx->clauses.push_back(c);
+	//ctx->clauses.push_front(c);
 };
 
 struct SMT_var* gen_const(struct ctx* ctx, uint32_t val, int width)
 {
-	//printf ("%s(%d, %d)\n", __FUNCTION__, val, width);
+	if (verbose)
+		printf ("%s(%d, %d) begin\n", __FUNCTION__, val, width);
 	struct SMT_var* rt=create_internal_variable(ctx, "internal", TY_BITVEC, width);
 	add_comment(ctx, "gen_const(val=%d, width=%d). SAT_var=[%d..%d]", val, width, rt->SAT_var, rt->SAT_var+width-1);
 	for (int i=0; i<width; i++)
@@ -651,6 +669,8 @@ struct SMT_var* gen_const(struct ctx* ctx, uint32_t val, int width)
 			add_clause1 (ctx, -(rt->SAT_var+i));
 		}
 	};
+	if (verbose)
+		printf ("%s(%d, %d) end\n", __FUNCTION__, val, width);
 	return rt;
 }
 
@@ -1041,6 +1061,10 @@ struct SMT_var* gen_BVUDIV(struct ctx* ctx, struct SMT_var* v1, struct SMT_var* 
 	struct SMT_var *r;
 
 	gen_divisor (ctx, v1, v2, &q, &r);
+
+	// remainderless division?!
+	//int w=r->width;
+	//fix_BV_to_zero (ctx, r->SAT_var, w);
 
 	return q;
 };
@@ -1559,6 +1583,13 @@ struct SMT_var* gen_binary (struct ctx* ctx, struct expr* e)
 
 struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 {
+	if (verbose)
+	{
+		printf ("%s() begin ", __FUNCTION__);
+		print_expr(e);
+		printf ("\n");
+	};
+
 	struct SMT_var* rt;
 		
 	switch (e->node_type)
@@ -1568,26 +1599,36 @@ struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 			if(rt==NULL)
 				die ("line %d: variable %s hasn't been declared\n", yylineno, e->id);
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 
 		case EXPR_CONST:
 			rt=gen_const(ctx, e->const_val, e->width);
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 	
 		case EXPR_ZERO_EXTEND:
 			rt=gen_zero_extend(ctx, gen(ctx, e->op1), e->const_val);
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 
 		case EXPR_REPEAT:
 			rt=gen_repeat(ctx, gen(ctx, e->op1), e->const_val);
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 
 		case EXPR_EXTRACT:
 			rt=gen_extract(ctx, gen(ctx, e->op1), e->const_val, e->width);
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 
 		case EXPR_UNARY:
@@ -1601,9 +1642,13 @@ struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 				default:		assert(0);
 			};
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 	
 		case EXPR_BINARY:
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return gen_binary(ctx, e);
 
 		case EXPR_TERNARY:
@@ -1611,6 +1656,8 @@ struct SMT_var* gen(struct ctx* ctx, struct expr* e)
 
 			rt=gen_ITE(ctx, gen(ctx, e->op1), gen(ctx, e->op2), gen(ctx, e->op3));
 			rt->e=e;
+			if (verbose)
+				printf ("%s:%d end\n", __FUNCTION__, __LINE__);
 			return rt;
 
 		default:
@@ -1691,12 +1738,14 @@ void write_CNF(struct ctx* ctx, const char *fname)
 		if (c.type==SOFT_CLAUSE)
 		{
 			assert(ctx->maxsat);
-			std::string s=cxx_list_of_ints_to_string(c.li);
+			//std::string s=cxx_list_of_ints_to_string(c.li);
+			std::string s=cxx_list_of_vectors_to_string(c.li);
 			fprintf (f, "%u %s 0\n", c.weight, s.c_str());
 		}
 		else if (c.type==HARD_CLASUE)
 		{
-			std::string s=cxx_list_of_ints_to_string(c.li);
+			//std::string s=cxx_list_of_ints_to_string(c.li);
+			std::string s=cxx_list_of_vectors_to_string(c.li);
 			if (ctx->maxsat)
 				fprintf (f, "%u %s 0\n", hard_clause_weight, s.c_str());
 			else
@@ -1721,8 +1770,9 @@ uint32_t SAT_solution_to_value(int* a, int w)
 
 void fill_variables_from_SAT_solver_response(struct ctx* ctx, int *array)
 {
-	for (auto v : ctx->vars)
+	for (auto i : ctx->vars)
 	{
+		struct SMT_var* v=i.second;
 		// do not set internal variables, for faster results:
 		if (ctx->dump_internal_variables==false && v->internal)
 			continue;
@@ -1779,6 +1829,9 @@ bool run_minisat_and_get_solution(struct ctx* ctx)
 
 void add_clauses_to_picosat(struct ctx* ctx, struct PicoSAT *p)
 {
+	if (verbose)
+		printf ("%s() begin. ctx->clauses.size()=%lld\n", __FUNCTION__, ctx->clauses.size());
+
 	for (auto c : ctx->clauses)
 	{
 		if (c.type==HARD_CLASUE)
@@ -1788,6 +1841,8 @@ void add_clauses_to_picosat(struct ctx* ctx, struct PicoSAT *p)
 			picosat_add(p, 0);
 		}
 	};
+	if (verbose)
+		printf ("%s() end\n", __FUNCTION__);
 };
 
 int* fill_variables_from_picosat(struct ctx* ctx, struct PicoSAT *p)
@@ -1802,6 +1857,8 @@ int* fill_variables_from_picosat(struct ctx* ctx, struct PicoSAT *p)
 
 bool run_picosat_and_get_solution(struct ctx* ctx)
 {
+	if (verbose>0)
+		printf ("%s() begin\n", __FUNCTION__);
 	assert (ctx->maxsat==false);
 	struct PicoSAT *p=picosat_init ();
 
@@ -1813,6 +1870,8 @@ bool run_picosat_and_get_solution(struct ctx* ctx)
 		printf ("CNF file written to tmp.cnf\n");
 	};
 
+	if (verbose>0)
+		printf ("%s() going to call picosat_sat()\n", __FUNCTION__);
 	int res=picosat_sat (p,-1);
 	if (res==20)
 		return false;
@@ -1973,6 +2032,7 @@ struct ctx* MK85_init()
 	ctx->next_internal_var=1;
 	ctx->dump_internal_variables=false;
 	ctx->write_CNF_file=false;
+	//ctx->write_CNF_file=true;
 	ctx->clauses_t=0;
 	ctx->max_weight=0;
 	ctx->maxsat=false;

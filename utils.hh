@@ -4,6 +4,7 @@
 
 #include <list>
 #include <string>
+#include <vector>
 
 void* xmalloc(size_t size);
 void xfree (void* p);
@@ -21,4 +22,5 @@ uint32_t mylog2(const uint32_t x);
 int popcount64c(uint64_t x);
 std::string remove_trailing_space (std::string s);
 std::string cxx_list_of_ints_to_string (std::list<int> l);
+std::string cxx_list_of_vectors_to_string (std::vector<int> l);
 

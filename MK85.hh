@@ -4,6 +4,8 @@
 
 #include <string>
 #include <list>
+#include <map>
+#include <vector>
 
 #include <stdint.h>
 
@@ -23,7 +25,8 @@ public:
 	enum clause_type type;
 	std::string s; // if COMMENT
 	uint32_t weight; // if SOFT_CLAUSE
-	std::list<int> li; // if HARD_CLASUE/SOFT_CLAUSE
+	//std::list<int> li; // if HARD_CLASUE/SOFT_CLAUSE
+	std::vector<int> li; // if HARD_CLASUE/SOFT_CLAUSE
 };
 
 struct SMT_var
@@ -40,7 +43,8 @@ struct SMT_var
 
 struct ctx
 {
-	std::list<struct SMT_var*> vars;
+	//std::list<struct SMT_var*> vars;
+	std::map<std::string, struct SMT_var*> vars;
 	int SAT_next_var_no; // =1 in init()!
 	int next_internal_var; // =1 in init()
 	struct SMT_var* var_always_false; // NULL in init();

@@ -1,6 +1,6 @@
 sat
 (model
+	(define-fun out () Bool true)
 	(define-fun p () Bool false)
 	(define-fun q () Bool true)
-	(define-fun out () Bool true)
 )
