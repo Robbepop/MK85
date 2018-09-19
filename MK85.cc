@@ -1698,6 +1698,7 @@ void create_assert (struct ctx* ctx, struct expr* e)
 	add_clause1 (ctx, v->SAT_var); // "ground" v to True
 };
 
+// TODO bool
 void create_min_max (struct ctx* ctx, struct expr* e, int min_max)
 {
 	if (ctx->create_min_max_called)

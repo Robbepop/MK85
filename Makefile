@@ -16,6 +16,7 @@ libMK85.so: MK85.o utils.o picosat.o
 
 picosat.o: picosat/picosat.h picosat/picosat.c
 	gcc $(COPT) picosat/picosat.c
+	#gcc $(COPT) -DNDEBUG picosat/picosat.c
 
 utils.o: utils.cc utils.hh
 	g++ $(COPT) utils.cc
