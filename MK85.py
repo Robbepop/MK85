@@ -64,6 +64,11 @@ class expr:
         e=self.lib.create_bin_expr(MK85.OP_BVLSHR, self.expr, other.expr)
         return expr(self.lib, self.ctx, e)
 
+    def __lshift__ (self, other):
+        other=self.make_const_if_need(self.expr, other)
+        e=self.lib.create_bin_expr(MK85.OP_BVSHL, self.expr, other.expr)
+        return expr(self.lib, self.ctx, e)
+
     def __add__ (self, other):
         other=self.make_const_if_need(self.expr, other)
         e=self.lib.create_bin_expr(MK85.OP_BVADD, self.expr, other.expr)
@@ -172,19 +177,40 @@ class MK85:
             print "Error: Can't find libMK85.so"
             exit(0)
 
+        self.lib.MK85_init.restype=c_void_p
+
+        self.lib.get_type_of_expr.argtypes=[c_void_p]
+
+        self.lib.create_id.argtypes=[c_void_p, c_void_p]
+        self.lib.create_id.restype=c_void_p
+
+	self.lib.declare_variable.argtypes=[c_void_p, c_void_p, c_int, c_int, c_int]
+        self.lib.declare_variable.restype=c_void_p
+
+        self.lib.get_width_of_expr.argtypes=[c_void_p]
+
+        self.lib.create_unary_expr.argtypes=[c_uint, c_void_p]
+        self.lib.create_unary_expr.restype=c_void_p
+
         self.lib.create_bin_expr.argtypes=[c_uint, c_void_p, c_void_p]
         self.lib.create_bin_expr.restype=c_void_p
+
+        self.lib.create_ternary_expr.argtypes=[c_uint, c_void_p, c_void_p, c_void_p]
+        self.lib.create_ternary_expr.restype=c_void_p
 
         self.lib.create_distinct_expr.argtypes=[c_void_p]
         
 	self.lib.create_const_expr.argtypes=[c_uint, c_ulong, c_int]
+        self.lib.create_const_expr.restype=c_void_p
 
-        self.lib.create_assert.argtypes=[c_uint, c_void_p]
+        self.lib.create_assert.argtypes=[c_void_p, c_void_p]
 
         self.lib.set_next.argtypes=[c_void_p, c_void_p]
 
+        self.lib.check_sat.argtypes=[c_void_p]
         self.lib.check_sat.restype=c_bool
 
+        self.lib.get_variable_val.argtypes=[c_void_p, c_void_p]
         self.lib.get_variable_val.restype=c_uint
 
         self.lib.count_models.argtypes=[c_void_p]

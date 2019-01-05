@@ -83,15 +83,3 @@ It has no optimizations at all.
 If it encounters two "(bvadd x y)", two adders would be generated instead of one.
 Maybe SAT-solver (minisat/picosat in this case) could optimize this out, or maybe not.
 
-## Further reading
-
-I've found these papers/articles/books helpful: 
-
-* [Armin Biere - Using High Performance SAT and QBF Solvers](http://fmv.jku.at/biere/talks/Biere-TPTPA11.pdf)
-* https://en.wikipedia.org/wiki/Tseytin_transformation
-* [Martin Finke - Equisatisfiable SAT Encodings of Arithmetical Operations](http://www.martin-finke.de/documents/Masterarbeit_bitblast_Finke.pdf)
-
-* Henry Warren - Hacker's Delight.
-Some people say these branchless tricks and hacks were only relevant for old RISC CPUs, so you don't need to read it.
-Nevertheless, these hacks and understanding them helps immensely to get into boolean algebra and all the mathematics.
-

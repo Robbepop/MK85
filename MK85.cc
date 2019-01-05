@@ -2028,6 +2028,7 @@ unsigned int count_models(struct ctx* ctx)
 struct ctx* MK85_init()
 {
 	struct ctx* ctx=new (struct ctx);
+	//printf ("%s() ctx=0x%p\n", __FUNCTION__, ctx);
 
 	ctx->SAT_next_var_no=1;
 	ctx->next_internal_var=1;
